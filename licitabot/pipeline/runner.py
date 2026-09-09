@@ -8,7 +8,7 @@ from typing import Callable
 
 from sqlmodel import select
 
-from licitabot.config import get_settings
+from licitabot.config import get_settings, limite_diario
 from licitabot.db.models import Oportunidade
 from licitabot.db.session import db_session, get_oportunidade, set_status
 from licitabot.pipeline.states import STEPS, Status, next_step_for
@@ -73,7 +73,7 @@ def _gate(session, op: Oportunidade, step: str) -> str | None:
         from licitabot.pipeline.notify import limite_diario_atingido
 
         if limite_diario_atingido(session):
-            raise Adiar(f"limite diário de {s.limite_diario_envios} envios atingido; fica na fila para amanhã")
+            raise Adiar(f"limite diário de {limite_diario()} envios atingido; fica na fila para amanhã")
     if step in ("prepare", "submit"):
         motivo_portal = None
         if op.portal != "comprasgov":
@@ -182,7 +182,7 @@ def process_pending(limite: int = 20, ate: str = "notify") -> dict[str, int]:
     with db_session() as session:
         enviados = envios_hoje(session)
         stats["envios_hoje"] = enviados
-        restante_dia = max(0, get_settings().limite_diario_envios - enviados)
+        restante_dia = max(0, limite_diario() - enviados)
         if restante_dia == 0:
             # só etapas baratas (ingestão e triagem) para manter a fila pronta para amanhã
             ativos = [st for st in ativos if st in (Status.DESCOBERTA, Status.BAIXADA)]

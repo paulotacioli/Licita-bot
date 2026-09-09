@@ -337,3 +337,36 @@ def cofre_scan():
 
 if __name__ == "__main__":
     app()
+
+
+@app.command("painel-senha")
+def painel_senha(
+    usuario: str = typer.Option(None, "--usuario", "-u", help="Usuário (padrão: o primeiro cadastrado)"),
+):
+    """Define ou redefine a senha de acesso ao painel web (uso no servidor, quando esquecer a senha)."""
+    from sqlmodel import select
+
+    from licitabot.db.models import UsuarioPainel
+    from licitabot.db.session import db_session, init_db
+    from licitabot.web.auth import forca_da_senha, gerar_hash
+
+    init_db()
+    senha = typer.prompt("Nova senha", hide_input=True, confirmation_prompt=True)
+    motivo = forca_da_senha(senha)
+    if motivo:
+        rprint(f"[red]{motivo}[/red]")
+        raise typer.Exit(1)
+    with db_session() as session:
+        if usuario:
+            u = session.exec(select(UsuarioPainel).where(UsuarioPainel.usuario == usuario.strip().lower())).first()
+        else:
+            u = session.exec(select(UsuarioPainel).order_by(UsuarioPainel.id)).first()
+        if u:
+            u.senha_hash = gerar_hash(senha)
+            session.add(u)
+            rprint(f"[green]Senha de '{u.usuario}' redefinida.[/green]")
+        else:
+            nome = (usuario or "admin").strip().lower()
+            session.add(UsuarioPainel(usuario=nome, senha_hash=gerar_hash(senha)))
+            rprint(f"[green]Usuário '{nome}' criado.[/green]")
+        session.commit()

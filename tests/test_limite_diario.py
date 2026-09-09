@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 
-from licitabot.config import get_settings
 from licitabot.db.models import Oportunidade
 from licitabot.db.session import db_session, log_evento
 from licitabot.pipeline.notify import envios_hoje, limite_diario_atingido
@@ -23,7 +22,10 @@ def test_envios_hoje_conta_apenas_hoje():
 
 
 def test_gate_adia_quando_limite_atingido(monkeypatch):
-    monkeypatch.setattr(get_settings(), "limite_diario_envios", 0)
+    # O limite efetivo vem de config/notificacoes.yaml (editável no painel) e só cai
+    # para o .env quando o YAML não define nada. Aqui forçamos o valor já resolvido.
+    monkeypatch.setattr("licitabot.pipeline.notify.limite_diario", lambda: 0)
+    monkeypatch.setattr("licitabot.pipeline.runner.limite_diario", lambda: 0)
     assert limite_diario_atingido()
     with db_session() as s:
         op = Oportunidade(numero_controle_pncp="lim-2", orgao_cnpj="1", ano=2026, sequencial=2, portal="comprasgov")
@@ -31,4 +33,3 @@ def test_gate_adia_quando_limite_atingido(monkeypatch):
         s.commit()
         with pytest.raises(Adiar):
             _gate(s, op, "notify")
-    monkeypatch.setattr(get_settings(), "limite_diario_envios", 50)

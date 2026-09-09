@@ -246,3 +246,15 @@ class OnboardingPasso(SQLModel, table=True):
     concluido_em: Optional[datetime] = None
     verificacao_automatica: bool = False
     observacao: str = Field(default="", sa_column=Column(Text))
+
+
+class UsuarioPainel(SQLModel, table=True):
+    """Usuário do painel web. A senha é guardada como hash PBKDF2, nunca em texto."""
+
+    __tablename__ = "usuario_painel"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario: str = Field(index=True, unique=True)
+    senha_hash: str = ""
+    criado_em: datetime = Field(default_factory=utcnow)
+    ultimo_acesso_em: Optional[datetime] = None

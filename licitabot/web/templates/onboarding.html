@@ -1,22 +1,67 @@
 {% extends "base.html" %}
+{% import "_icons.html" as i %}
 {% block title %}Onboarding{% endblock %}
+
 {% block content %}
+{% if ok %}
+<div class="alert alert-ok">
+  {{ i.ico('ok') }}
+  <div><b>Onboarding completo.</b> O robô pode preparar e enviar propostas no portal,
+  respeitando o modo seguro e a sua aprovação.</div>
+</div>
+{% else %}
+<div class="alert alert-warn">
+  {{ i.ico('alerta') }}
+  <div>
+    <b>Faltam {{ faltando|length }} {{ 'item' if faltando|length == 1 else 'itens' }} para o robô operar no portal.</b>
+    Enquanto isso ele continua descobrindo, analisando, precificando e gerando documentos,
+    e manda um e-mail informativo em vez de preparar a proposta.
+    <ul>{% for f in faltando %}<li>{{ f }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
-  <h2 style="margin-top:0">Onboarding {% if ok %}<span class="ok">completo</span>{% else %}<span class="warn">incompleto — etapas de portal bloqueadas</span>{% endif %}</h2>
-  {% if faltando %}<ul>{% for f in faltando %}<li class="warn">{{ f }}</li>{% endfor %}</ul>{% endif %}
-  <table>
-    <tr><th>#</th><th>Passo</th><th>Status</th><th>Observação</th><th></th></tr>
-    {% for p in passos %}
-    <tr>
-      <td>{{ p.ordem }}</td>
-      <td><b>{{ p.titulo }}</b><div class="muted">{{ p.descricao }}</div></td>
-      <td>{% if p.concluido %}<span class="ok">✔ feito</span>{% else %}<span class="bad">pendente</span>{% endif %}{% if p.verificacao_automatica %}<div class="muted">verificado automaticamente</div>{% endif %}</td>
-      <td class="muted">{{ p.observacao }}</td>
-      <td>{% if not p.verificacao_automatica %}
-        <form method="post" action="/onboarding/{{ p.chave }}"><input type="hidden" name="concluido" value="{{ '0' if p.concluido else '1' }}"><button class="btn">{{ "desmarcar" if p.concluido else "marcar feito" }}</button></form>
-      {% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  <div class="card-head">
+    <div>
+      <h2>Passos de habilitação</h2>
+      <div class="card-note">Alguns são verificados sozinhos; os demais você marca quando concluir.</div>
+    </div>
+  </div>
+  <div class="card-body tight">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Passo</th><th>Situação</th><th>Observação</th><th></th></tr></thead>
+        <tbody>
+        {% for p in passos %}
+          <tr>
+            <td class="id">{{ p.ordem }}</td>
+            <td>
+              <b>{{ p.titulo }}</b>
+              {% if p.descricao %}<div class="muted" style="font-size:12.5px;margin-top:2px">{{ p.descricao }}</div>{% endif %}
+            </td>
+            <td class="nowrap">
+              {% if p.concluido %}
+                <span class="pill s-APROVADA">concluído</span>
+              {% else %}
+                <span class="pill s-ERRO">pendente</span>
+              {% endif %}
+              {% if p.verificacao_automatica %}<div class="muted" style="font-size:11px;margin-top:3px">automático</div>{% endif %}
+            </td>
+            <td class="muted">{{ p.observacao }}</td>
+            <td>
+              {% if not p.verificacao_automatica %}
+              <form method="post" action="/onboarding/{{ p.chave }}">
+                <input type="hidden" name="concluido" value="{{ '0' if p.concluido else '1' }}">
+                <button class="btn sm" type="submit">{{ "Desmarcar" if p.concluido else "Marcar feito" }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

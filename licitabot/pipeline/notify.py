@@ -17,7 +17,7 @@ from sqlmodel import select
 
 from licitabot.approval.service import decidir_por_email, montar_snapshot
 from licitabot.approval.tokens import expiracao_para, gerar_token, snapshot_hash, token_hash
-from licitabot.config import get_settings, load_empresa
+from licitabot.config import destinatarios, get_settings, limite_diario, load_empresa
 from licitabot.db.models import Aprovacao, DocumentoGerado, ExecucaoPortal, Item, Oportunidade, utcnow
 from licitabot.db.session import db_session, log_evento, set_status
 from licitabot.pipeline.analysis import get_requisitos
@@ -42,11 +42,15 @@ def _fmt_brl(v: float | None) -> str:
 
 def enviar_email(assunto: str, html: str, anexos: list[Path] | None = None, inline_png: list[Path] | None = None, headers: dict | None = None) -> str:
     s = get_settings()
-    if not (s.smtp_user and s.smtp_password and s.owner_email):
-        raise RuntimeError("SMTP_USER/SMTP_PASSWORD/OWNER_EMAIL não configurados no .env")
+    para = destinatarios()
+    if not (s.smtp_user and s.smtp_password and para):
+        raise RuntimeError(
+            "Envio de e-mail não configurado: faltam SMTP_USER/SMTP_PASSWORD no .env ou destinatários "
+            "em Configurações > Notificações (ou OWNER_EMAIL no .env)."
+        )
     msg = EmailMessage()
     msg["From"] = s.smtp_user
-    msg["To"] = s.owner_email
+    msg["To"] = ", ".join(para)
     msg["Subject"] = assunto
     msg_id = make_msgid(domain="licitabot.local")
     msg["Message-ID"] = msg_id
@@ -91,7 +95,7 @@ def envios_hoje(session=None) -> int:
 
 
 def limite_diario_atingido(session=None) -> bool:
-    return envios_hoje(session) >= get_settings().limite_diario_envios
+    return envios_hoje(session) >= limite_diario()
 
 
 def _registrar_envio(session, op: Oportunidade, canal: str, msg_id: str) -> None:
@@ -221,7 +225,7 @@ def send_daily_digest() -> None:
         ok_onb, faltando = onboarding_completo()
         html = _env().get_template("resumo_diario.html.j2").render(
             data=agora.strftime("%d/%m/%Y"), novas=novas, relevantes=relevantes, fila=len(fila), erros=len(erros),
-            enviados_ontem=enviados_ontem, limite=s.limite_diario_envios, ok_onb=ok_onb, faltando=faltando,
+            enviados_ontem=enviados_ontem, limite=limite_diario(), ok_onb=ok_onb, faltando=faltando,
             fmt=_fmt_brl, dashboard=f"http://{s.web_host}:{s.web_port}/",
             pncp=lambda o: f"https://pncp.gov.br/app/editais/{o.orgao_cnpj}/{o.ano}/{o.sequencial}",
         )
@@ -284,7 +288,7 @@ def poll_replies() -> int:
             _, raw = M.fetch(num, "(RFC822)")
             msg = email.message_from_bytes(raw[0][1])
             remetente = email.utils.parseaddr(msg.get("From", ""))[1].lower()
-            if remetente != s.owner_email.lower():
+            if remetente not in {e.lower() for e in destinatarios()}:
                 continue
             m = ASSUNTO_RX.search(msg.get("Subject", ""))
             if not m:

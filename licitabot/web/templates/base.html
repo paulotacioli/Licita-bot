@@ -1,37 +1,91 @@
-<!doctype html>
+{% import "_icons.html" as i %}<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Licita-Bot{% endblock %}</title>
-<style>
-  :root{--bg:#f5f7fa;--card:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--ok:#16a34a;--warn:#b45309;--bad:#dc2626;--brand:#1d4ed8}
-  body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
-  header{background:#0f172a;color:#fff;padding:12px 24px;display:flex;gap:18px;align-items:center}
-  header a{color:#cbd5e1;text-decoration:none}header a:hover{color:#fff}
-  main{max-width:1200px;margin:20px auto;padding:0 16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
-  table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-  th{background:#f3f4f6;font-weight:600}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#e5e7eb}
-  .s-AGUARDANDO_APROVACAO{background:#fef3c7;color:#92400e}.s-APROVADA,.s-ENVIADA,.s-DOCS_GERADOS,.s-PREPARADA_PORTAL{background:#dcfce7;color:#166534}
-  .s-ERRO,.s-BLOQUEADA{background:#fee2e2;color:#991b1b}.s-DESCARTADA,.s-REJEITADA,.s-EXPIRADA{background:#e5e7eb;color:#374151}
-  .btn{display:inline-block;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;text-decoration:none;color:var(--ink)}
-  .btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}.btn.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
-  .muted{color:var(--muted)}.warn{color:var(--warn)}.bad{color:var(--bad)}.ok{color:var(--ok)}
-  input[type=text],input[type=number]{padding:4px 6px;border:1px solid var(--line);border-radius:4px;width:110px}
-  .banner{background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px}
-</style>
+<meta name="color-scheme" content="light">
+<title>{% block title %}Painel{% endblock %} · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
 <body>
-<header>
-  <b>Licita-Bot</b>
-  <a href="/">Oportunidades</a>
-  <a href="/onboarding">Onboarding</a>
-  <a href="/?status=AGUARDANDO_APROVACAO">Aguardando aprovação</a>
-  <a href="/?status=BLOQUEADA">Bloqueadas</a>
-  <a href="/?status=ZONA_CINZENTA">Zona cinzenta</a>
-</header>
-<main>{% block content %}{% endblock %}</main>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="brand-mark">{{ i.ico('robo', 18) }}</span>
+      <span>
+        <span class="brand-name">Licita-Bot</span><br>
+        <span class="brand-sub">{{ empresa_nome or 'Licitações públicas' }}</span>
+      </span>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Acompanhamento</div>
+      <a href="/" class="{{ 'on' if pagina == 'oportunidades' }}">
+        {{ i.ico('lista') }} Oportunidades
+        {% if nav_contagem.ativas %}<span class="count">{{ nav_contagem.ativas }}</span>{% endif %}
+      </a>
+      <a href="/?status=AGUARDANDO_APROVACAO" class="{{ 'on' if pagina == 'aprovacao' }}">
+        {{ i.ico('relogio') }} Aguardando aprovação
+        {% if nav_contagem.aprovacao %}<span class="count">{{ nav_contagem.aprovacao }}</span>{% endif %}
+      </a>
+      <a href="/?status=ZONA_CINZENTA" class="{{ 'on' if pagina == 'cinzenta' }}">
+        {{ i.ico('duvida') }} Zona cinzenta
+        {% if nav_contagem.cinzenta %}<span class="count">{{ nav_contagem.cinzenta }}</span>{% endif %}
+      </a>
+      <a href="/?status=BLOQUEADA" class="{{ 'on' if pagina == 'bloqueadas' }}">
+        {{ i.ico('bloqueio') }} Bloqueadas
+        {% if nav_contagem.bloqueadas %}<span class="count">{{ nav_contagem.bloqueadas }}</span>{% endif %}
+      </a>
+
+      <div class="nav-label">Configuração</div>
+      <a href="/configuracoes/notificacoes" class="{{ 'on' if pagina == 'cfg-notificacoes' }}">{{ i.ico('sino') }} Notificações</a>
+      <a href="/configuracoes/filtros" class="{{ 'on' if pagina == 'cfg-filtros' }}">{{ i.ico('funil') }} Filtros de busca</a>
+      <a href="/configuracoes/precos" class="{{ 'on' if pagina == 'cfg-precos' }}">{{ i.ico('dinheiro') }} Preços</a>
+      <a href="/configuracoes/empresa" class="{{ 'on' if pagina == 'cfg-empresa' }}">{{ i.ico('predio') }} Empresa</a>
+      <a href="/onboarding" class="{{ 'on' if pagina == 'onboarding' }}">
+        {{ i.ico('checklist') }} Onboarding
+        {% if nav_contagem.pendencias %}<span class="count">{{ nav_contagem.pendencias }}</span>{% endif %}
+      </a>
+      <a href="/conta" class="{{ 'on' if pagina == 'conta' }}">{{ i.ico('cadeado') }} Minha conta</a>
+    </nav>
+
+    <div class="side-foot">
+      {{ usuario or 'sessão' }} · <a href="/sair">sair</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1>{% block cabecalho %}{{ self.title() }}{% endblock %}</h1>
+      {% block acoes %}{% endblock %}
+    </header>
+
+    <div class="content">
+      {% if dry_run %}
+      <div class="alert alert-warn">
+        {{ i.ico('alerta') }}
+        <div><b>Modo seguro ativo.</b> O robô faz tudo, inclusive preencher a proposta no portal,
+        mas nunca clica em enviar. Desligue com <span class="mono">DRY_RUN=false</span> no arquivo <span class="mono">.env</span> quando estiver pronto.</div>
+      </div>
+      {% endif %}
+      {% if mensagem %}
+      <div class="alert alert-ok">{{ i.ico('ok') }}<div>{{ mensagem }}</div></div>
+      {% endif %}
+      {% if erros %}
+      <div class="alert alert-bad">
+        {{ i.ico('alerta') }}
+        <div><b>Nada foi salvo.</b> Corrija e tente de novo:
+          <ul>{% for e in erros %}<li>{{ e }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
 </body>
 </html>

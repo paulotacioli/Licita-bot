@@ -1,84 +1,263 @@
 {% extends "base.html" %}
-{% block title %}#{{ op.id }} {{ op.orgao_nome }}{% endblock %}
+{% import "_icons.html" as i %}
+{% block title %}Licitação {{ op.id }}{% endblock %}
+{% block cabecalho %}<a href="/" class="muted" style="font-weight:500">Oportunidades</a> <span class="muted">/</span> {{ op.id }}{% endblock %}
+
+{% block acoes %}
+<a class="btn sm ghost" href="/">{{ i.ico('seta-esq', 15) }} Voltar</a>
+{% endblock %}
+
 {% block content %}
 <div class="card">
-  <h2 style="margin:0 0 4px">#{{ op.id }} · {{ op.orgao_nome }} <span class="muted">({{ op.esfera }} · {{ op.uf }} · {{ op.municipio }})</span></h2>
-  <div class="muted">{{ op.numero_controle_pncp }} · {{ op.modalidade_nome }} · {{ op.modo_disputa or "" }}{% if op.srp %} · SRP{% endif %}{% if op.uasg %} · UASG {{ op.uasg }}{% endif %}</div>
-  <p><span class="pill s-{{ op.status }}">{{ op.status }}</span> {{ op.status_motivo }}</p>
-  {% if op.erro_ultimo %}<p class="bad">Último erro: {{ op.erro_ultimo[:400] }}</p>{% endif %}
-  <p><b>Prazo:</b> {{ op.data_encerramento_proposta }} · <b>Sessão:</b> {{ op.data_sessao or "-" }} · <b>Portal:</b> {{ op.portal }}
-    {% if op.link_sistema_origem %}· <a href="{{ op.link_sistema_origem }}" target="_blank">abrir no portal</a>{% endif %}
-    · <a href="https://pncp.gov.br/app/editais/{{ op.orgao_cnpj }}/{{ op.ano }}/{{ op.sequencial }}" target="_blank">PNCP</a></p>
-  <p><b>Objeto:</b> {{ op.objeto }}</p>
-  <p class="muted">Pasta: {{ op.pasta }}</p>
-  <form method="post" action="/oportunidades/{{ op.id }}/acao" style="display:flex;gap:8px;flex-wrap:wrap">
-    {% if op.status == "AGUARDANDO_APROVACAO" %}
-      <button class="btn ok" name="acao" value="aprovar" onclick="return confirm('Aprovar e ENVIAR a proposta? Ela é vinculante.')">Aprovar e enviar</button>
-      <button class="btn bad" name="acao" value="rejeitar">Rejeitar</button>
+  <div class="card-head">
+    <div style="min-width:0">
+      <h2>{{ op.orgao_nome }}</h2>
+      <div class="card-note">
+        {{ op.unidade_nome }}{% if op.unidade_nome %} · {% endif %}{{ op.municipio }}{% if op.uf %}/{{ op.uf }}{% endif %} · {{ op.esfera }}
+      </div>
+    </div>
+    <span class="pill lg s-{{ op.status }}">{{ op.status|humano }}</span>
+  </div>
+
+  <div class="card-body">
+    {% if op.status_motivo %}
+    <div class="alert {{ 'alert-bad' if op.status in ('ERRO','BLOQUEADA') else 'alert-info' }}">
+      {{ i.ico('info') }}<div>{{ op.status_motivo }}</div>
+    </div>
     {% endif %}
-    {% if op.status in ("ERRO","BLOQUEADA") %}<button class="btn" name="acao" value="retomar">Retomar</button>{% endif %}
-    {% if op.status == "ZONA_CINZENTA" %}<button class="btn ok" name="acao" value="promover">Promover (relevante)</button>{% endif %}
-    {% if op.status not in ("DESCARTADA","ENVIADA","ENCERRADA") %}<button class="btn" name="acao" value="descartar" onclick="return confirm('Descartar?')">Descartar</button>{% endif %}
-  </form>
+    {% if op.erro_ultimo %}
+    <div class="alert alert-bad">{{ i.ico('alerta') }}<div><b>Último erro:</b> {{ op.erro_ultimo|truncate(400, True) }}</div></div>
+    {% endif %}
+
+    <div class="grid-2" style="gap:14px 24px">
+      <div>
+        <div class="hint mb0">Prazo para propostas</div>
+        <b class="mono">{{ op.data_encerramento_proposta|dt_longo }}</b>
+      </div>
+      <div>
+        <div class="hint mb0">Sessão pública</div>
+        <b class="mono">{{ op.data_sessao|dt_longo }}</b>
+      </div>
+      <div>
+        <div class="hint mb0">Valor estimado pelo órgão</div>
+        <b class="mono">{{ op.valor_estimado|brl }}</b>
+      </div>
+      <div>
+        <div class="hint mb0">Modalidade</div>
+        <b>{{ op.modalidade_nome or '—' }}{% if op.srp %} · SRP{% endif %}</b>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:18px">
+      <div class="hint mb0">Objeto</div>
+      <p class="mb0">{{ op.objeto }}</p>
+    </div>
+
+    <div class="btn-row" style="margin-top:6px">
+      <a class="btn sm" target="_blank" rel="noopener"
+         href="https://pncp.gov.br/app/editais/{{ op.orgao_cnpj }}/{{ op.ano }}/{{ op.sequencial }}">Ver no PNCP</a>
+      {% if op.link_sistema_origem %}
+      <a class="btn sm" target="_blank" rel="noopener" href="{{ op.link_sistema_origem }}">Abrir no portal</a>
+      {% endif %}
+      <span class="muted mono" style="font-size:11.5px">{{ op.numero_controle_pncp }}</span>
+    </div>
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0">
+    <form method="post" action="/oportunidades/{{ op.id }}/acao" class="btn-row" style="flex:1">
+      {% if op.status == "AGUARDANDO_APROVACAO" %}
+        <button class="btn ok" name="acao" value="aprovar"
+                onclick="return confirm('Aprovar e enviar a proposta? Uma proposta enviada é vinculante.')">
+          {{ i.ico('ok', 15) }} Aprovar e enviar
+        </button>
+        <button class="btn bad" name="acao" value="rejeitar">Rejeitar</button>
+      {% endif %}
+      {% if op.status in ("ERRO", "BLOQUEADA") %}
+        <button class="btn" name="acao" value="retomar">Retomar do último passo bom</button>
+      {% endif %}
+      {% if op.status == "ZONA_CINZENTA" %}
+        <button class="btn ok" name="acao" value="promover">Marcar como relevante</button>
+      {% endif %}
+      {% if op.status not in ("DESCARTADA", "ENVIADA", "ENCERRADA") %}
+        <button class="btn ghost" name="acao" value="descartar"
+                onclick="return confirm('Descartar esta licitação?')">Descartar</button>
+      {% endif %}
+    </form>
+  </div>
 </div>
 
 {% if tri %}
-<div class="card"><b>Triagem:</b> score {{ tri.score }} · {{ tri.categoria }} · {{ tri.justificativa }}</div>
+<div class="card">
+  <div class="card-head">
+    <h2>Triagem por IA</h2>
+    <span class="pill {{ 's-APROVADA' if tri.score >= 60 else 's-ZONA_CINZENTA' }}">nota {{ tri.score }}/100</span>
+  </div>
+  <div class="card-body">
+    <p class="mb0"><b>{{ tri.categoria }}</b> — {{ tri.justificativa }}</p>
+  </div>
+</div>
 {% endif %}
 
 <div class="card">
-  <h3 style="margin-top:0">Itens e preços</h3>
+  <div class="card-head">
+    <div>
+      <h2>Itens e preços</h2>
+      <div class="card-note">A IA sugere as horas; o preço sai das regras em
+        <a href="/configuracoes/precos">Preços</a>. Editar aqui refaz os documentos.</div>
+    </div>
+  </div>
+  {% if itens %}
   <form method="post" action="/oportunidades/{{ op.id }}/precos-salvar">
-  <table>
-    <tr><th>Nº</th><th>Descrição</th><th>Qtd</th><th>Est. unit.</th><th>Proposto unit.</th><th>Total</th><th>Participa</th><th>Memória de cálculo</th></tr>
-    {% for i in itens %}
-    <tr>
-      <td>{{ i.numero_item }}</td>
-      <td>{{ i.descricao[:160] }}<div class="muted">{{ i.tipo_precificacao }} · {{ i.tipo_beneficio }}{% if i.horas_estimadas %} · {{ i.horas_estimadas }} h sugeridas{% endif %}</div></td>
-      <td>{{ "%g"|format(i.quantidade) }} {{ i.unidade }}</td>
-      <td>{{ "{:,.2f}".format(i.valor_unit_estimado or 0) }}</td>
-      <td><input type="text" name="unit_{{ i.numero_item }}" value="{{ '%.2f'|format(i.valor_unit_proposto or 0) }}"></td>
-      <td>{{ "{:,.2f}".format(i.valor_total_proposto or 0) }}</td>
-      <td><input type="checkbox" name="part_{{ i.numero_item }}" {% if i.participar %}checked{% endif %}></td>
-      <td class="muted">{{ i.justificativa_preco[:160] }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  <p><button class="btn">Salvar preços (volta para PRECIFICADA e regera documentos)</button></p>
+    <div class="card-body tight">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Nº</th><th>Descrição</th><th class="num">Qtd</th><th class="num">Estimado</th>
+                <th class="num">Nosso preço</th><th class="num">Total</th><th>Participa</th><th>Memória de cálculo</th></tr>
+          </thead>
+          <tbody>
+          {% for it in itens %}
+            <tr>
+              <td class="id">{{ it.numero_item }}</td>
+              <td>{{ it.descricao|truncate(170, True) }}
+                <div class="muted" style="font-size:11.5px">
+                  {{ it.tipo_precificacao }}{% if it.tipo_beneficio %} · {{ it.tipo_beneficio }}{% endif %}
+                  {%- if it.horas_estimadas %} · {{ it.horas_estimadas|round|int }} h sugeridas{% endif %}
+                </div>
+              </td>
+              <td class="num">{{ "%g"|format(it.quantidade) }} {{ it.unidade }}</td>
+              <td class="num">{{ it.valor_unit_estimado|brl }}</td>
+              <td class="num" style="width:132px">
+                <div class="with-prefix" style="max-width:128px">
+                  <span class="prefix">R$</span>
+                  <input type="text" inputmode="decimal" class="num" name="unit_{{ it.numero_item }}"
+                         value="{{ '%.2f'|format(it.valor_unit_proposto or 0) }}">
+                </div>
+              </td>
+              <td class="num">{{ it.valor_total_proposto|brl }}</td>
+              <td style="text-align:center">
+                <input type="checkbox" name="part_{{ it.numero_item }}" {% if it.participar %}checked{% endif %}
+                       style="width:17px;height:17px;accent-color:var(--brand)">
+              </td>
+              <td class="muted" style="font-size:12px">{{ it.justificativa_preco|truncate(150, True) }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="card-note">Salvar devolve a licitação para a etapa de precificação e regera os documentos.</div>
+      <button class="btn primary" type="submit">Salvar preços</button>
+    </div>
   </form>
+  {% else %}
+  <div class="empty"><h3>Sem itens ainda</h3><p class="mb0">Os itens aparecem depois da análise do edital.</p></div>
+  {% endif %}
 </div>
 
 {% if req %}
 <div class="card">
-  <h3 style="margin-top:0">Análise do edital <span class="muted">(confiança {{ req.confianca }})</span></h3>
-  <p>Critério: <b>{{ req.criterio_julgamento }}</b> por <b>{{ req.julgamento_por }}</b> · ME/EPP: {{ req.beneficio_me_epp }} · SICAF: {{ req.exige_sicaf }} · Visita: {{ req.exige_visita_tecnica }} · Amostra/POC: {{ req.exige_amostra_ou_poc }}</p>
-  <p>Prazos: encerramento {{ req.prazos.encerramento_propostas }} · sessão {{ req.prazos.sessao_publica }} · validade mínima {{ req.prazos.validade_minima_proposta_dias }} dias · execução {{ req.prazos.prazo_execucao }}</p>
-  {% if req.alertas %}<p class="warn"><b>Alertas:</b></p><ul>{% for a in req.alertas %}<li class="warn">{{ a }}</li>{% endfor %}</ul>{% endif %}
-  <table>
-    <tr><th>Fase</th><th>Documento</th><th>Exigência</th><th>Ref.</th></tr>
-    {% for d in req.documentos_exigidos %}<tr><td>{{ d.fase }}</td><td>{{ d.tipo }}{% if not d.obrigatorio %} <span class="muted">(opcional)</span>{% endif %}</td><td>{{ d.descricao_literal }}</td><td class="muted">{{ d.referencia }}</td></tr>{% endfor %}
-  </table>
+  <div class="card-head">
+    <h2>Análise do edital</h2>
+    <span class="pill">confiança {{ req.confianca }}</span>
+  </div>
+  <div class="card-body">
+    <p><b>{{ req.criterio_julgamento }}</b> por <b>{{ req.julgamento_por }}</b>
+       · ME/EPP: {{ 'sim' if req.beneficio_me_epp else 'não' }}
+       · SICAF: {{ 'sim' if req.exige_sicaf else 'não' }}
+       · Visita técnica: {{ 'sim' if req.exige_visita_tecnica else 'não' }}
+       · Amostra/POC: {{ 'sim' if req.exige_amostra_ou_poc else 'não' }}</p>
+    {% if req.alertas %}
+    <div class="alert alert-warn">
+      {{ i.ico('alerta') }}
+      <div><b>Pontos de atenção</b><ul>{% for a in req.alertas %}<li>{{ a }}</li>{% endfor %}</ul></div>
+    </div>
+    {% endif %}
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Fase</th><th>Documento</th><th>Exigência</th><th>Referência</th></tr></thead>
+        <tbody>
+        {% for d in req.documentos_exigidos %}
+          <tr>
+            <td class="nowrap">{{ d.fase }}</td>
+            <td>{{ d.tipo }}{% if not d.obrigatorio %} <span class="muted">(opcional)</span>{% endif %}</td>
+            <td class="muted">{{ d.descricao_literal }}</td>
+            <td class="muted mono" style="font-size:11.5px">{{ d.referencia }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endif %}
 
 {% if docs %}
 <div class="card">
-  <h3 style="margin-top:0">Documentos</h3>
-  <table>
-    <tr><th>#</th><th>Tipo</th><th>Título</th><th>Origem</th><th>Status</th><th>Arquivo</th><th>Obs.</th></tr>
-    {% for d in docs %}<tr><td>{{ d.ordem }}</td><td>{{ d.tipo }}</td><td>{{ d.titulo }}</td><td>{{ d.origem }}</td>
-      <td class="{% if d.status in ('FALTANDO','VENCIDO') %}bad{% elif d.status=='PRECISA_ASSINATURA' %}warn{% else %}ok{% endif %}">{{ d.status }}</td>
-      <td class="muted">{{ d.caminho_pdf or d.caminho_docx }}</td><td class="muted">{{ d.observacao }}</td></tr>{% endfor %}
-  </table>
+  <div class="card-head"><h2>Documentos da proposta</h2></div>
+  <div class="card-body tight">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Tipo</th><th>Título</th><th>Origem</th><th>Situação</th><th>Observação</th></tr></thead>
+        <tbody>
+        {% for d in docs %}
+          <tr>
+            <td class="id">{{ d.ordem }}</td>
+            <td>{{ d.tipo }}</td>
+            <td>{{ d.titulo }}</td>
+            <td class="muted">{{ d.origem }}</td>
+            <td>
+              <span class="pill {% if d.status in ('FALTANDO','VENCIDO') %}s-ERRO{% elif d.status == 'PRECISA_ASSINATURA' %}s-AGUARDANDO_APROVACAO{% else %}s-APROVADA{% endif %}">{{ d.status }}</span>
+            </td>
+            <td class="muted">{{ d.observacao }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endif %}
 
 {% if aps %}
-<div class="card"><h3 style="margin-top:0">Aprovações</h3>
-<table><tr><th>#</th><th>Criada</th><th>Expira</th><th>Decisão</th><th>Quando</th><th>Canal</th></tr>
-{% for a in aps %}<tr><td>{{ a.id }}</td><td>{{ a.criado_em }}</td><td>{{ a.expira_em }}</td><td>{{ a.decisao }}</td><td>{{ a.decidido_em or "-" }}</td><td>{{ a.canal }}</td></tr>{% endfor %}</table></div>
+<div class="card">
+  <div class="card-head"><h2>Histórico de aprovações</h2></div>
+  <div class="card-body tight">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Criada</th><th>Expira</th><th>Decisão</th><th>Quando</th><th>Canal</th></tr></thead>
+        <tbody>
+        {% for a in aps %}
+          <tr>
+            <td class="id">{{ a.id }}</td>
+            <td class="mono" style="font-size:12px">{{ a.criado_em|dt }}</td>
+            <td class="mono" style="font-size:12px">{{ a.expira_em|dt }}</td>
+            <td><span class="pill {{ 's-APROVADA' if a.decisao == 'aprovada' else ('s-ERRO' if a.decisao == 'rejeitada' else '') }}">{{ a.decisao }}</span></td>
+            <td class="mono" style="font-size:12px">{{ a.decidido_em|dt }}</td>
+            <td class="muted">{{ a.canal }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endif %}
 
-<div class="card"><h3 style="margin-top:0">Eventos</h3>
-<table>{% for e in evs %}<tr><td class="muted" style="white-space:nowrap">{{ e.criado_em.strftime("%d/%m %H:%M") }}</td><td>{{ e.tipo }}</td><td>{{ e.mensagem }}</td></tr>{% endfor %}</table></div>
+<div class="card">
+  <div class="card-head"><h2>Linha do tempo</h2></div>
+  <div class="card-body">
+    <ul class="timeline">
+      {% for e in evs %}
+      <li>
+        <time>{{ e.criado_em|dt }}</time>
+        <span><b>{{ e.tipo }}</b> {{ e.mensagem }}</span>
+      </li>
+      {% else %}
+      <li class="muted">Nenhum evento registrado.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
 {% endblock %}

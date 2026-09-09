@@ -1,8 +1,26 @@
-{% extends "base.html" %}
-{% block title %}Resultado{% endblock %}
-{% block content %}
-<div class="card" style="max-width:640px;margin:40px auto;text-align:center">
-  <h2 class="{% if ok %}ok{% else %}bad{% endif %}">{{ msg }}</h2>
-  <p class="muted">Você pode fechar esta página.</p>
-</div>
-{% endblock %}
+{% import "_icons.html" as i %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Resultado · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="plain">
+<main class="panel">
+  <div class="panel-head">
+    <span class="brand-mark" {% if not ok %}style="background:linear-gradient(160deg,#d14343,#b91c1c)"{% endif %}>
+      {{ i.ico('ok' if ok else 'alerta', 22) }}
+    </span>
+    <h1>{{ msg }}</h1>
+    <p>Pode fechar esta página.</p>
+  </div>
+</main>
+</body>
+</html>

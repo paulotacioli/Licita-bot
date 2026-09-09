@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% import "_icons.html" as i %}
+{% block title %}{{ secao.titulo }}{% endblock %}
+
+{% block content %}
+<div class="tabs">
+  {% for s in secoes %}
+  <a href="/configuracoes/{{ s.slug }}" class="{{ 'on' if s.slug == secao.slug }}">{{ s.titulo }}</a>
+  {% endfor %}
+</div>
+
+<form method="post" action="/configuracoes/{{ secao.slug }}">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>{{ secao.titulo }}</h2>
+        <div class="card-note">{{ secao.descricao }}</div>
+      </div>
+      <span class="pill mono">config/{{ secao.arquivo }}</span>
+    </div>
+
+    <div class="card-body">
+      {% if secao.slug == 'empresa' %}
+      <div class="alert alert-info">
+        {{ i.ico('info') }}
+        <div>Estes dados entram nas propostas e declarações assinadas. Um erro aqui vira um erro
+        num documento oficial, então confira com o contrato social antes de salvar.</div>
+      </div>
+      {% endif %}
+
+      <div class="{{ 'grid-2' if secao.slug in ('empresa', 'precos') else '' }}">
+        {% for campo, valor in campos %}
+        <div class="field">
+          {% if campo.tipo == 'booleano' %}
+            <div class="check">
+              <input type="checkbox" id="{{ campo.chave }}" name="{{ campo.chave }}" {{ 'checked' if valor }}>
+              <label for="{{ campo.chave }}">
+                <b>{{ campo.label }}</b>
+                {% if campo.ajuda %}<br><span class="muted">{{ campo.ajuda }}</span>{% endif %}
+              </label>
+            </div>
+
+          {% else %}
+            <label class="lbl" for="{{ campo.chave }}">
+              {{ campo.label }}{% if campo.obrigatorio %} <span class="bad" title="Obrigatório">*</span>{% endif %}
+            </label>
+            {% if campo.ajuda %}<div class="hint">{{ campo.ajuda }}</div>{% endif %}
+
+            {% if campo.tipo == 'lista' %}
+              <textarea id="{{ campo.chave }}" name="{{ campo.chave }}"
+                        rows="{{ 4 if secao.slug == 'notificacoes' else 8 }}"
+                        spellcheck="false">{{ valor }}</textarea>
+              <div class="hint" style="margin:5px 0 0">
+                {{ (valor.splitlines() | length) if valor else 0 }} item(ns). Um por linha.
+              </div>
+
+            {% elif campo.tipo == 'percentual' %}
+              <div class="with-suffix">
+                <input type="text" inputmode="decimal" class="num" id="{{ campo.chave }}"
+                       name="{{ campo.chave }}" value="{{ valor }}">
+                <span class="suffix">%</span>
+              </div>
+
+            {% elif campo.tipo == 'dinheiro' %}
+              <div class="with-prefix">
+                <span class="prefix">R$</span>
+                <input type="text" inputmode="decimal" class="num" id="{{ campo.chave }}"
+                       name="{{ campo.chave }}" value="{{ valor }}">
+              </div>
+
+            {% elif campo.tipo == 'inteiro' %}
+              <input type="text" inputmode="numeric" class="num input-narrow" id="{{ campo.chave }}"
+                     name="{{ campo.chave }}" value="{{ valor }}">
+
+            {% else %}
+              <input type="text" class="input-mid" id="{{ campo.chave }}"
+                     name="{{ campo.chave }}" value="{{ valor }}">
+            {% endif %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="card-note">
+        Os comentários explicativos do arquivo são preservados ao salvar.
+      </div>
+      <div class="btn-row">
+        <a class="btn ghost" href="/configuracoes/{{ secao.slug }}">Descartar</a>
+        <button class="btn primary" type="submit">{{ i.ico('ok') }} Salvar alterações</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% if secao.slug == 'filtros' %}
+<div class="card">
+  <div class="card-head"><h2>Aplicar os filtros ao que já está no banco</h2></div>
+  <div class="card-body">
+    <p class="muted mb0">Mudar os filtros não mexe nas licitações já descobertas. Este botão reavalia
+    as que ainda estão em <span class="mono">DESCOBERTA</span> com as regras novas e descarta as que
+    não passarem mais. Nada é apagado: a licitação só muda de status.</p>
+    <div class="btn-row" style="margin-top:14px">
+      <form method="post" action="/configuracoes/filtros/reaplicar">
+        <button class="btn" type="submit">{{ i.ico('funil') }} Reaplicar filtros agora</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if secao.slug == 'notificacoes' %}
+<div class="card">
+  <div class="card-head"><h2>Testar o envio</h2></div>
+  <div class="card-body">
+    <p class="muted mb0">Manda um e-mail de teste para todos os destinatários acima, usando as
+    credenciais SMTP do arquivo <span class="mono">.env</span>. Serve para confirmar que a senha de
+    aplicativo está correta antes de o robô começar a avisar de verdade.</p>
+    <div class="btn-row" style="margin-top:14px">
+      <form method="post" action="/configuracoes/notificacoes/testar">
+        <button class="btn" type="submit">{{ i.ico('inbox') }} Enviar e-mail de teste</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

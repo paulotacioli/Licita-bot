@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "_icons.html" as i %}
+{% block title %}Minha conta{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:560px">
+  <div class="card-head">
+    <div>
+      <h2>Trocar a senha</h2>
+      <div class="card-note">Usuário <b class="mono">{{ usuario }}</b>{% if ultimo_acesso %} · último acesso em {{ ultimo_acesso }}{% endif %}</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <form method="post" action="/conta/senha" autocomplete="off">
+      <div class="field">
+        <label class="lbl" for="atual">Senha atual</label>
+        <input type="password" id="atual" name="atual" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label class="lbl" for="nova">Nova senha</label>
+        <div class="hint">Pelo menos 10 caracteres, misturando letras e números.</div>
+        <input type="password" id="nova" name="nova" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label class="lbl" for="nova2">Repita a nova senha</label>
+        <input type="password" id="nova2" name="nova2" autocomplete="new-password" required>
+      </div>
+      <button class="btn primary" type="submit">Trocar senha</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px">
+  <div class="card-head"><h2>Sessão</h2></div>
+  <div class="card-body">
+    <p class="muted">A sessão dura 7 dias neste navegador. Sair encerra apenas este dispositivo.</p>
+    <a class="btn" href="/sair">{{ i.ico('sair', 15) }} Sair do painel</a>
+  </div>
+</div>
+{% endblock %}

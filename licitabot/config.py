@@ -176,6 +176,18 @@ class Triagem(BaseModel):
     max_paginas_por_termo: int = 50
 
 
+class Notificacoes(BaseModel):
+    """config/notificacoes.yaml: preferências de envio, editáveis pelo painel.
+
+    Quando um campo aqui está preenchido, ele vence o equivalente do .env. Isso mantém os
+    segredos no .env e as preferências do dia a dia num arquivo que o painel pode reescrever.
+    """
+
+    destinatarios: list[str] = Field(default_factory=list)
+    limite_diario_envios: int | None = None
+    hora_resumo_diario: int | None = None
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -206,3 +218,32 @@ def load_triagem(settings: Settings | None = None) -> Triagem:
 def load_selectors(portal: str = "comprasgov", settings: Settings | None = None) -> dict[str, Any]:
     s = settings or get_settings()
     return _load_yaml(s.config_path / "selectors" / f"{portal}.yaml")
+
+
+def load_notificacoes(settings: Settings | None = None) -> Notificacoes:
+    s = settings or get_settings()
+    return Notificacoes.model_validate(_load_yaml(s.config_path / "notificacoes.yaml"))
+
+
+def destinatarios(settings: Settings | None = None) -> list[str]:
+    """E-mails que recebem avisos, resumos e pedidos de aprovação.
+
+    Usa a lista de config/notificacoes.yaml; se estiver vazia, cai para o OWNER_EMAIL do .env.
+    """
+    s = settings or get_settings()
+    lista = [e.strip() for e in load_notificacoes(s).destinatarios if e and e.strip()]
+    if lista:
+        return lista
+    return [s.owner_email.strip()] if s.owner_email.strip() else []
+
+
+def limite_diario(settings: Settings | None = None) -> int:
+    s = settings or get_settings()
+    v = load_notificacoes(s).limite_diario_envios
+    return v if v is not None else s.limite_diario_envios
+
+
+def hora_resumo(settings: Settings | None = None) -> int:
+    s = settings or get_settings()
+    v = load_notificacoes(s).hora_resumo_diario
+    return v if v is not None else s.hora_resumo_diario

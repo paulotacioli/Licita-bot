@@ -47,7 +47,8 @@ Todos os comandos abaixo pressupõem `.\.venv\Scripts\licitabot.exe` (ou ative o
 | `licitabot cofre scan` | Indexa o cofre e mostra validade das certidões |
 | `licitabot onboarding kit-sicaf` | Organiza os documentos do cofre por nível do SICAF + guia |
 | `licitabot worker` | Scheduler (descoberta 2/2h, pipeline 15 min, aprovações/envio 5 min, monitor, certidões) |
-| `licitabot web` | Dashboard em http://127.0.0.1:8765 + endpoints `/aprovar/{token}` e `/rejeitar/{token}` |
+| `licitabot web` | Painel em http://127.0.0.1:8765 + endpoints `/aprovar/{token}` e `/rejeitar/{token}` |
+| `licitabot painel-senha` | Define ou redefine a senha de acesso ao painel (para quando esquecer) |
 
 Operação contínua: `scripts\install_task_scheduler.ps1` registra worker e web no logon; `scripts\start_tunnel.ps1` expõe o endpoint de aprovação.
 
@@ -57,6 +58,28 @@ Operação contínua: `scripts\install_task_scheduler.ps1` registra worker e web
 - Cada licitação compatível gera **um e-mail**: de aprovação (com botões) quando o portal está disponível, ou **informativo** (análise, preços e documentos prontos) enquanto o cadastro SICAF/gov.br não estiver completo.
 - Limite de **`LIMITE_DIARIO_ENVIOS`** (padrão 50) licitações por dia; o excedente fica na fila para o dia seguinte. Ingestão e triagem continuam rodando para a fila estar pronta.
 - Às `HORA_RESUMO_DIARIO` (padrão 8h) sai o **resumo diário**: novas compatíveis nas últimas 24h, enviadas ontem, fila, erros e pendências de onboarding. Para enviar agora: `licitabot resumo-diario`. Teste de SMTP: `licitabot email-teste`.
+
+## Painel web
+
+`licitabot web` sobe o painel. No primeiro acesso ele pede para criar um usuário e uma senha; a senha
+é guardada como hash PBKDF2 e a sessão dura 7 dias. Esqueceu? `licitabot painel-senha` redefine pelo servidor.
+As páginas `/aprovar`, `/rejeitar` e `/decidir` ficam fora do login de propósito, porque são clicadas a partir
+do e-mail: quem protege elas é o token assinado, de uso único e com prazo.
+
+Além do acompanhamento das licitações, o painel edita a configuração sem precisar abrir arquivo no servidor:
+
+| Seção | Arquivo | O que ajusta |
+|---|---|---|
+| Notificações | `config/notificacoes.yaml` | Quem recebe os e-mails (vários endereços), limite diário, hora do resumo |
+| Filtros de busca | `config/triagem.yaml` | Termos pesquisados no PNCP, palavras que exigem ou descartam, UFs, prazo e notas de corte |
+| Preços | `config/precos.yaml` | Valor/hora, margem, impostos, descontos, tetos e preços de SaaS/PF/UST |
+| Empresa | `config/empresa.yaml` | Dados cadastrais, representante que assina e dados bancários |
+
+Os comentários explicativos dos YAML são preservados na gravação, e um formulário inválido não grava nada:
+os erros voltam na tela com o que você digitou. Mudou os filtros? O botão **Reaplicar filtros** reavalia as
+licitações que ainda estão em `DESCOBERTA` com as regras novas, sem apagar nada.
+
+`OWNER_EMAIL` no `.env` continua valendo como destinatário único quando a lista do painel está vazia.
 
 ## Fluxo de aprovação
 
@@ -85,6 +108,7 @@ e **dar lances na sessão pública** (a v1 só monitora e avisa).
 - `licitabot/pncp` cliente PNCP · `pipeline/` etapas · `llm/` Claude (saída estruturada) · `docs/` templates e declarações
 - `portal/comprasgov/` Playwright (seletores em `config/selectors/comprasgov.yaml`) · `approval/` tokens · `web/` FastAPI
 - `sicaf/` onboarding · `cofre/` índice de documentos · `scheduler.py` jobs · `cli.py`
+- `web/auth.py` login do painel · `web/config_service.py` edição dos YAML preservando comentários
 - `data/oportunidades/<id>/` edital, `analise.json`, `proposta/` (docx+pdf+checklist), `screenshots/`, `comprovante/`
 
 ## Testes

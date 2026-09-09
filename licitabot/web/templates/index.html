@@ -1,26 +1,91 @@
 {% extends "base.html" %}
-{% block content %}
-{% if dry_run %}<div class="banner">DRY_RUN ativo: propostas nunca são enviadas de verdade. Desligue no .env quando estiver pronto.</div>{% endif %}
-<div class="card">
-  <b>Contagem por status:</b>
-  {% for st, n in contagem.items()|sort %}<a class="pill s-{{ st }}" href="/?status={{ st }}" style="margin:2px">{{ st }} {{ n }}</a>{% endfor %}
+{% import "_icons.html" as i %}
+{% block title %}{{ titulo_pagina }}{% endblock %}
+
+{% block acoes %}
+<div class="btn-row">
+  <a class="btn sm {{ '' if status else 'primary' }}" href="/">Ativas</a>
+  <a class="btn sm {{ 'primary' if status == 'DESCARTADA' }}" href="/?status=DESCARTADA">Descartadas</a>
+  <a class="btn sm {{ 'primary' if status == 'ERRO' }}" href="/?status=ERRO">Com erro</a>
 </div>
+{% endblock %}
+
+{% block content %}
+{% if not status %}
+<div class="stats">
+  <a class="stat" href="/">
+    <span class="stat-n">{{ nav_contagem.ativas }}</span>
+    <span class="stat-l">Em acompanhamento</span>
+  </a>
+  <a class="stat accent" href="/?status=AGUARDANDO_APROVACAO">
+    <span class="stat-n">{{ nav_contagem.aprovacao }}</span>
+    <span class="stat-l">Aguardando sua aprovação</span>
+  </a>
+  <a class="stat" href="/?status=ZONA_CINZENTA">
+    <span class="stat-n">{{ nav_contagem.cinzenta }}</span>
+    <span class="stat-l">Zona cinzenta</span>
+  </a>
+  <a class="stat bad" href="/?status=BLOQUEADA">
+    <span class="stat-n">{{ nav_contagem.bloqueadas }}</span>
+    <span class="stat-l">Bloqueadas</span>
+  </a>
+  <div class="stat">
+    <span class="stat-n">{{ contagem.get('DESCOBERTA', 0) }}</span>
+    <span class="stat-l">Na fila de análise</span>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
-  <h2 style="margin-top:0">{{ status or "Oportunidades ativas" }} ({{ ops|length }})</h2>
-  <table>
-    <tr><th>ID</th><th>Status</th><th>Prazo</th><th>UF</th><th>Órgão</th><th>Portal</th><th>Valor est.</th><th>Objeto</th></tr>
-    {% for o in ops %}
-    <tr>
-      <td><a href="/oportunidades/{{ o.id }}">{{ o.id }}</a></td>
-      <td><span class="pill s-{{ o.status }}">{{ o.status }}</span></td>
-      <td>{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
-      <td>{{ o.uf }}</td>
-      <td>{{ o.orgao_nome[:45] }}</td>
-      <td>{{ o.portal }}</td>
-      <td>{{ "{:,.0f}".format(o.valor_estimado) if o.valor_estimado else "-" }}</td>
-      <td>{{ o.objeto[:140] }}<div class="muted">{{ o.status_motivo[:120] }}</div></td>
-    </tr>
-    {% endfor %}
-  </table>
+  <div class="card-head">
+    <div>
+      <h2>{{ titulo_pagina }}</h2>
+      <div class="card-note">
+        {{ ops|length }} {{ 'licitação' if ops|length == 1 else 'licitações' }}{% if ops|length >= limite %},
+        mostrando as {{ limite }} de prazo mais próximo{% endif %}. Ordenadas pelo prazo que vence primeiro.
+      </div>
+    </div>
+  </div>
+
+  {% if ops %}
+  <div class="card-body tight">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Situação</th><th>Prazo</th><th>UF</th>
+            <th>Órgão</th><th class="num">Valor estimado</th><th>Objeto</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for o in ops %}
+          <tr>
+            <td class="id"><a href="/oportunidades/{{ o.id }}">{{ o.id }}</a></td>
+            <td><span class="pill s-{{ o.status }}">{{ o.status|humano }}</span></td>
+            <td class="nowrap mono" style="font-size:12px">{{ o.data_encerramento_proposta|dt }}</td>
+            <td class="nowrap">{{ o.uf or '—' }}</td>
+            <td>{{ o.orgao_nome|truncate(52, True) }}<div class="muted" style="font-size:11.5px">{{ o.municipio }}</div></td>
+            <td class="num">{{ o.valor_estimado|brl_curto }}</td>
+            <td class="obj">
+              <div class="obj-t">{{ o.objeto }}</div>
+              {% if o.status_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.status_motivo|truncate(110, True) }}</div>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">
+    {{ i.ico('inbox', 34) }}
+    <h3>Nenhuma licitação aqui</h3>
+    <p class="mb0">
+      {% if status %}Nenhuma licitação com esta situação no momento.
+      {% else %}Rode a descoberta para buscar editais no PNCP, ou ajuste os
+      <a href="/configuracoes/filtros">filtros de busca</a>.{% endif %}
+    </p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

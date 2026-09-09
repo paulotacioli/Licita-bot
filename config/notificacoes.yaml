@@ -1,0 +1,11 @@
+# Quem recebe os e-mails do Licita-Bot e com que frequência.
+# Editável pelo painel em Configurações > Notificações.
+
+# Um e-mail por item. Se ficar vazio, vale o OWNER_EMAIL do .env.
+destinatarios: []
+
+# Máximo de licitações enviadas por e-mail em um dia; o excedente fica na fila para o dia seguinte.
+limite_diario_envios: 50
+
+# Hora de Brasília (0-23) em que sai o resumo diário.
+hora_resumo_diario: 8

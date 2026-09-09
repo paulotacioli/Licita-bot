@@ -151,7 +151,8 @@ def _verificar_automaticos(session) -> None:
         from licitabot.llm.claude_code import cli_verificado
 
         checks["claude_code"] = cli_verificado()
-    ok_mail = bool(s.smtp_user and s.smtp_password and s.owner_email and len(s.approval_secret) >= 32)
+    from licitabot.config import destinatarios as _dest
+    ok_mail = bool(s.smtp_user and s.smtp_password and _dest() and len(s.approval_secret) >= 32)
     checks["email_config"] = (ok_mail, "" if ok_mail else "SMTP/OWNER_EMAIL/APPROVAL_SECRET incompletos")
     checks["dry_run_off"] = (not s.dry_run, "DRY_RUN=true (modo seguro)" if s.dry_run else "")
     for chave, (ok, obs) in checks.items():

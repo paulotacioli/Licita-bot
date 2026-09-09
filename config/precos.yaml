@@ -1,4 +1,6 @@
 # Regras de precificação. A IA apenas SUGERE horas; estas regras decidem o preço de cada licitação.
+# Editável pelo painel em Configurações > Preços. Os comentários abaixo são preservados ao salvar,
+# por isso eles explicam o papel de cada campo em vez de repetir o número que está ao lado.
 #
 # Como o preço "justo" é decidido, item a item:
 #   1. custo = horas (sugeridas pela IA a partir do edital) x valor/hora do perfil; SaaS = usuários x preço/mês x meses.
@@ -21,10 +23,10 @@ perfis_hora:
 valor_hora_padrao: 160.0          # usado quando o perfil não é identificado
 preco_ponto_funcao: 750.0         # custo por Ponto de Função; com margem+impostos ~R$ 1.070/PF (federais 2025-26 pagam R$ 1.000-1.300)
 preco_ust: 90.0                   # custo por UST / hora de serviço técnico
-margem_minima: 0.20               # 20% sobre o custo
+margem_minima: 0.20               # margem de lucro aplicada sobre o custo estimado
 fator_impostos: 0.16              # impostos aproximados embutidos no preço (Simples/Lucro Presumido serviços)
-desconto_alvo_vs_estimado: 0.10   # preço justo: 10% abaixo do estimado do órgão
-desconto_maximo_vs_estimado: 0.30 # piso = 70% do valor estimado (abaixo disso o órgão costuma exigir prova de exequibilidade)
+desconto_alvo_vs_estimado: 0.10   # preço justo: abaixo do valor estimado pelo órgão
+desconto_maximo_vs_estimado: 0.30 # piso da proposta; abaixo dele o órgão costuma exigir prova de exequibilidade
 valor_maximo_proposta: 3000000    # teto absoluto por proposta (R$)
 valor_minimo_oportunidade: 20000  # ignora oportunidades abaixo disso (R$)
 preco_saas_usuario_mes: 49.90

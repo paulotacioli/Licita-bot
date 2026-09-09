@@ -1,25 +1,73 @@
-{% extends "base.html" %}
-{% block title %}Confirmar decisão{% endblock %}
-{% block content %}
-<div class="card" style="max-width:640px;margin:40px auto">
-{% if not info %}
-  <h2>Link inválido ou expirado</h2>
-  <p>Solicite um novo e-mail de aprovação ou decida pelo dashboard.</p>
-{% elif info.decisao_atual != "pendente" %}
-  <h2>Esta solicitação já foi {{ info.decisao_atual }}</h2>
-{% else %}
-  <h2>{% if info.acao == "aprovar" %}Aprovar e enviar a proposta?{% else %}Rejeitar a proposta?{% endif %}</h2>
-  <p><b>{{ info.orgao }}</b><br>{{ info.objeto }}</p>
-  <p>Prazo: {{ info.prazo }} · Total: R$ {{ "{:,.2f}".format(info.total) }}</p>
-  <table><tr><th>Item</th><th>Unit.</th><th>Total</th></tr>
-  {% for i in info.itens %}<tr><td>{{ i.n }}</td><td>{{ "{:,.2f}".format(i.unit or 0) }}</td><td>{{ "{:,.2f}".format(i.total or 0) }}</td></tr>{% endfor %}</table>
-  <form method="post" action="/decidir" style="margin-top:18px">
-    <input type="hidden" name="token" value="{{ token }}">
-    <button class="btn {% if info.acao == 'aprovar' %}ok{% else %}bad{% endif %}" style="font-size:16px;padding:12px 28px">
-      {% if info.acao == "aprovar" %}Confirmo: APROVAR e ENVIAR{% else %}Confirmo: REJEITAR{% endif %}
-    </button>
-  </form>
-  <p class="muted">Proposta enviada é vinculante (Lei 14.133/2021, art. 156).</p>
-{% endif %}
-</div>
-{% endblock %}
+{% import "_icons.html" as i %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Confirmar decisão · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="plain">
+<main class="panel wide">
+  {% if not info %}
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('alerta', 22) }}</span>
+      <h1>Link inválido ou expirado</h1>
+      <p>Peça um novo e-mail de aprovação, ou decida direto pelo painel.</p>
+    </div>
+  {% elif info.decisao_atual != "pendente" %}
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('ok', 22) }}</span>
+      <h1>Já {{ info.decisao_atual }}</h1>
+      <p>Esta solicitação já foi decidida. Nada mudou agora.</p>
+    </div>
+  {% else %}
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('robo', 22) }}</span>
+      <h1>{% if info.acao == "aprovar" %}Aprovar e enviar a proposta?{% else %}Rejeitar a proposta?{% endif %}</h1>
+      <p>{{ info.orgao }}</p>
+    </div>
+    <div class="panel-body">
+      <p>{{ info.objeto }}</p>
+
+      <div class="grid-2" style="gap:12px;margin:18px 0">
+        <div>
+          <div class="hint mb0">Prazo</div>
+          <b class="mono">{{ info.prazo }}</b>
+        </div>
+        <div>
+          <div class="hint mb0">Total da proposta</div>
+          <b class="mono" style="font-size:17px">{{ info.total|brl }}</b>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" style="border:1px solid var(--line);border-radius:var(--radius)">
+        <table>
+          <thead><tr><th>Item</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
+          <tbody>
+          {% for it in info.itens %}
+            <tr><td class="id">{{ it.n }}</td><td class="num">{{ it.unit|brl }}</td><td class="num">{{ it.total|brl }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form method="post" action="/decidir" style="margin-top:22px">
+        <input type="hidden" name="token" value="{{ token }}">
+        <button class="btn block {% if info.acao == 'aprovar' %}ok{% else %}bad{% endif %}" type="submit">
+          {% if info.acao == "aprovar" %}Confirmo: aprovar e enviar{% else %}Confirmo: rejeitar{% endif %}
+        </button>
+      </form>
+    </div>
+    <div class="panel-foot">
+      Uma proposta enviada é vinculante (Lei 14.133/2021, art. 156).
+    </div>
+  {% endif %}
+</main>
+</body>
+</html>

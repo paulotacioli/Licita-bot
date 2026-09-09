@@ -1,0 +1,52 @@
+{% import "_icons.html" as i %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Entrar · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="plain">
+  <main class="panel">
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('robo', 24) }}</span>
+      <h1>Licita-Bot</h1>
+      <p>Automação de licitações públicas de software</p>
+    </div>
+
+    <div class="panel-body">
+      {% if erro %}
+      <div class="alert alert-bad">{{ i.ico('alerta') }}<div>{{ erro }}</div></div>
+      {% endif %}
+      {% if aviso %}
+      <div class="alert alert-ok">{{ i.ico('ok') }}<div>{{ aviso }}</div></div>
+      {% endif %}
+
+      <form method="post" action="/login" autocomplete="on">
+        <input type="hidden" name="destino" value="{{ destino }}">
+        <div class="field">
+          <label class="lbl" for="usuario">Usuário</label>
+          <input type="text" id="usuario" name="usuario" autocomplete="username"
+                 autocapitalize="none" spellcheck="false" required autofocus
+                 value="{{ usuario_preenchido or '' }}">
+        </div>
+        <div class="field">
+          <label class="lbl" for="senha">Senha</label>
+          <input type="password" id="senha" name="senha" autocomplete="current-password" required>
+        </div>
+        <button class="btn primary block" type="submit">Entrar</button>
+      </form>
+    </div>
+
+    <div class="panel-foot">
+      Esqueceu a senha? Rode <span class="mono">licitabot painel-senha</span> no servidor.
+    </div>
+  </main>
+</body>
+</html>
