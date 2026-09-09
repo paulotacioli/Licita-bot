@@ -280,6 +280,7 @@
   }
   input::placeholder, textarea::placeholder { color: var(--ink-400); }
   textarea { min-height: 104px; resize: vertical; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; }
+  textarea.prosa { font-family: var(--sans); font-size: 14px; line-height: 1.6; min-height: 132px; }
   input.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .input-narrow { max-width: 240px; }
   .input-mid { max-width: 420px; }

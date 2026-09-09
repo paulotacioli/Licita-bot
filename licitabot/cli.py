@@ -88,6 +88,19 @@ def run(
 
 
 @app.command()
+def pretriar(limite: int = typer.Option(None, help="Máximo de oportunidades nesta rodada (padrão: perfil.maximo_por_rodada)")):
+    """Pré-triagem por IA: classifica pelo objeto as oportunidades em DESCOBERTA, sem baixar edital."""
+    from licitabot.db.session import init_db
+    from licitabot.pipeline.pretriagem import ativa, pretriar_pendentes
+
+    init_db()
+    if not ativa():
+        rprint("[yellow]Pré-triagem desligada ou perfil vazio. Preencha em Configurações > Perfil de interesse.[/yellow]")
+        raise typer.Exit(1)
+    rprint(pretriar_pendentes(limite=limite))
+
+
+@app.command()
 def process(
     limite: int = typer.Option(20, help="Máximo de oportunidades por execução"),
     ate: str = typer.Option("notify", "--ate", help="Etapa final automática"),

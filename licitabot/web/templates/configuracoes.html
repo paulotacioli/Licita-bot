@@ -28,6 +28,15 @@
       </div>
       {% endif %}
 
+      {% if secao.slug == 'perfil' %}
+      <div class="alert alert-info">
+        {{ i.ico('info') }}
+        <div>Este texto vai direto para a IA, em duas etapas: na <b>pré-triagem</b>, que lê só o objeto publicado no
+        PNCP e descarta o que claramente não combina; e na <b>triagem completa</b>, que lê o edital e verifica exigências
+        como presença física, marca específica ou atestado. Seja concreto: cite modelos de contratação, formas de
+        trabalho e o que é inaceitável.</div>
+      </div>
+      {% endif %}
       <div class="{{ 'grid-2' if secao.slug in ('empresa', 'precos') else '' }}">
         {% for campo, valor in campos %}
         <div class="field">
@@ -46,7 +55,11 @@
             </label>
             {% if campo.ajuda %}<div class="hint">{{ campo.ajuda }}</div>{% endif %}
 
-            {% if campo.tipo == 'lista' %}
+            {% if campo.tipo == 'area' %}
+              <textarea id="{{ campo.chave }}" name="{{ campo.chave }}" rows="6" class="prosa"
+                        placeholder="Escreva com suas palavras…">{{ valor }}</textarea>
+
+            {% elif campo.tipo == 'lista' %}
               <textarea id="{{ campo.chave }}" name="{{ campo.chave }}"
                         rows="{{ 4 if secao.slug == 'notificacoes' else 8 }}"
                         spellcheck="false">{{ valor }}</textarea>
@@ -93,6 +106,23 @@
     </div>
   </div>
 </form>
+
+{% if secao.slug == 'perfil' %}
+<div class="card">
+  <div class="card-head"><h2>Rodar a pré-triagem agora</h2></div>
+  <div class="card-body">
+    <p class="muted mb0">Avalia com a IA as licitações em <span class="mono">DESCOBERTA</span> que ainda não foram
+    classificadas, em lotes, respeitando o máximo por rodada. Roda em segundo plano; acompanhe pelos contadores da
+    barra lateral. O worker também faz isto sozinho a cada 15 minutos.</p>
+    <div class="btn-row" style="margin-top:14px">
+      <form method="post" action="/configuracoes/perfil/pretriar">
+        <button class="btn" type="submit">{{ i.ico('robo') }} Pré-triar pendentes</button>
+      </form>
+      <span class="muted" style="font-size:12.5px">{{ pendentes_pre_triagem }} aguardando</span>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% if secao.slug == 'filtros' %}
 <div class="card">

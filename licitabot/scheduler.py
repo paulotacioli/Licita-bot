@@ -24,8 +24,12 @@ def job_discover() -> None:
 
 
 def job_process() -> None:
+    from licitabot.pipeline.pretriagem import pretriar_pendentes
     from licitabot.pipeline.runner import process_pending, retomar_bloqueadas
 
+    pre = pretriar_pendentes()
+    if pre.get("avaliadas"):
+        log.info("job_process: pré-triagem %s", pre)
     n = retomar_bloqueadas()
     if n:
         log.info("job_process: %s bloqueadas retomadas", n)

@@ -36,7 +36,36 @@ def get_engine() -> Engine:
 
 
 def init_db() -> None:
-    SQLModel.metadata.create_all(get_engine())
+    engine = get_engine()
+    SQLModel.metadata.create_all(engine)
+    _acrescentar_colunas_novas(engine)
+
+
+def _acrescentar_colunas_novas(engine: Engine) -> list[str]:
+    """create_all cria tabelas novas mas não altera as existentes. Para colunas acrescentadas aos
+    modelos depois do primeiro deploy, comparamos com o PRAGMA e fazemos ALTER TABLE ADD COLUMN.
+    Só adiciona; nunca remove nem renomeia."""
+    adicionadas: list[str] = []
+    with engine.begin() as conn:
+        for tabela in SQLModel.metadata.sorted_tables:
+            existentes = {row[1] for row in conn.exec_driver_sql(f'PRAGMA table_info("{tabela.name}")')}
+            if not existentes:
+                continue  # tabela ainda não existe: create_all cuida dela inteira
+            for col in tabela.columns:
+                if col.name in existentes:
+                    continue
+                tipo = col.type.compile(dialect=engine.dialect)
+                padrao = ""
+                if col.default is not None and getattr(col.default, "is_scalar", False):
+                    v = col.default.arg
+                    padrao = f" DEFAULT {v!r}" if isinstance(v, str) else f" DEFAULT {int(v) if isinstance(v, bool) else v}"
+                conn.exec_driver_sql(f'ALTER TABLE "{tabela.name}" ADD COLUMN "{col.name}" {tipo}{padrao}')
+                adicionadas.append(f"{tabela.name}.{col.name}")
+            # índices declarados nos modelos para colunas recém-criadas
+            for idx in tabela.indexes:
+                cols = ", ".join(f'"{c.name}"' for c in idx.columns)
+                conn.exec_driver_sql(f'CREATE INDEX IF NOT EXISTS "{idx.name}" ON "{tabela.name}" ({cols})')
+    return adicionadas
 
 
 @contextmanager

@@ -411,7 +411,7 @@ async def salvar_precos(request: Request, oid: int):
 
 @app.get("/configuracoes", response_class=HTMLResponse)
 def configuracoes_raiz():
-    return RedirectResponse(url="/configuracoes/notificacoes", status_code=303)
+    return RedirectResponse(url="/configuracoes/perfil", status_code=303)
 
 
 @app.get("/configuracoes/{slug}", response_class=HTMLResponse)
@@ -419,8 +419,15 @@ def configuracoes(request: Request, slug: str):
     secao = cfg.SECOES_POR_SLUG.get(slug)
     if not secao:
         return HTMLResponse("Seção de configuração não encontrada.", status_code=404)
+    extra = {}
+    if slug == "perfil":
+        with db_session() as session:
+            extra["pendentes_pre_triagem"] = session.exec(
+                select(func.count()).select_from(Oportunidade)
+                .where(Oportunidade.status == Status.DESCOBERTA, Oportunidade.pre_triagem == "")
+            ).one()
     return templates.TemplateResponse(request, "configuracoes.html", _ctx(
-        request, secao=secao, secoes=cfg.SECOES, campos=cfg.formulario(secao), pagina=f"cfg-{slug}"))
+        request, secao=secao, secoes=cfg.SECOES, campos=cfg.formulario(secao), pagina=f"cfg-{slug}", **extra))
 
 
 @app.post("/configuracoes/{slug}", response_class=HTMLResponse)
@@ -437,6 +444,19 @@ async def configuracoes_salvar(request: Request, slug: str):
             request, secao=secao, secoes=cfg.SECOES, campos=campos, erros=erros, pagina=f"cfg-{slug}"), status_code=400)
     log.info("configuração '%s' salva pelo painel", slug)
     return RedirectResponse(url=f"/configuracoes/{slug}?ok=Configura%C3%A7%C3%A3o+salva.", status_code=303)
+
+
+@app.post("/configuracoes/perfil/pretriar")
+def pretriar_agora():
+    from licitabot.pipeline.pretriagem import ativa, rodar_em_segundo_plano
+
+    if not ativa():
+        return RedirectResponse(url="/configuracoes/perfil?ok=Ligue+a+pr%C3%A9-triagem+e+preencha+o+perfil+antes.", status_code=303)
+    if rodar_em_segundo_plano():
+        msg = "Pr%C3%A9-triagem+iniciada+em+segundo+plano."
+    else:
+        msg = "A+pr%C3%A9-triagem+j%C3%A1+est%C3%A1+rodando."
+    return RedirectResponse(url=f"/configuracoes/perfil?ok={msg}", status_code=303)
 
 
 @app.post("/configuracoes/filtros/reaplicar")

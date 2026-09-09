@@ -1,4 +1,27 @@
-# Filtros de descoberta e triagem (aplicados ANTES da IA, para economizar).
+# Filtros de descoberta e triagem. Editável pelo painel em Configurações.
+#
+# Duas camadas:
+#   1. `perfil`: o que a empresa busca e evita, em linguagem natural. Com `pre_triagem_ia: true`, a IA lê o
+#      objeto de cada edital novo (em lote, modelo barato) e descarta o que não combina, ANTES de baixar PDF.
+#      O mesmo texto orienta a triagem completa, que lê o edital.
+#   2. Cortes baratos e estruturais (modalidade, UF, prazo, valor, palavras negativas). As palavras positivas
+#      só são obrigatórias quando a pré-triagem por IA está desligada.
+
+perfil:
+  pre_triagem_ia: true
+  lote_pre_triagem: 40        # objetos por chamada à IA
+  maximo_por_rodada: 400      # limite por execução; o resto fica para a próxima
+  buscamos: >
+    Contratação de desenvolvimento de software sob demanda (fábrica de software, sistemas web e mobile,
+    pontos de função, horas de desenvolvimento), sustentação e manutenção evolutiva de sistemas existentes,
+    integração de sistemas e APIs, e licenciamento de sistema como serviço (SaaS) com hospedagem, em que
+    possamos entregar solução própria. Trabalho remoto, com equipe própria.
+  evitamos: >
+    Compra de equipamentos ou hardware, licenças de fabricante específico (Microsoft, Oracle, Adobe,
+    antivírus), outsourcing de postos de trabalho ou alocação de mão de obra presencial, exigência de
+    equipe residente no órgão, obras, telefonia, links de internet, impressão, e objetos em que o software
+    é só acessório de um equipamento.
+
 
 termos_busca:
   - software

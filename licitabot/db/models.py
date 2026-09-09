@@ -49,6 +49,9 @@ class Oportunidade(SQLModel, table=True):
 
     status: str = Field(default=Status.DESCOBERTA, index=True)
     status_motivo: str = Field(default="", sa_column=Column(Text))
+    # Pré-triagem por IA a partir do objeto (antes de baixar o edital): relevante | irrelevante | incerto | ""
+    pre_triagem: str = Field(default="", index=True)
+    pre_triagem_motivo: str = Field(default="", sa_column=Column(Text))
     erro_ultimo: str = Field(default="", sa_column=Column(Text))
     tentativas: int = 0
     pasta: str = ""

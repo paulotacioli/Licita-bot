@@ -30,8 +30,25 @@ def test_prazo_curto():
     assert "prazo" in _filtro_local(_item(data_fim_vigencia=curto), datetime.now())
 
 
-def test_sem_palavra_positiva():
+def _com_pre_triagem(monkeypatch, ligada: bool):
+    from licitabot.config import load_triagem
+    from licitabot.pipeline import discovery
+
+    tri = load_triagem()
+    tri.perfil.pre_triagem_ia = ligada
+    tri.perfil.buscamos = "software" if ligada else ""
+    monkeypatch.setattr(discovery, "load_triagem", lambda: tri)
+
+
+def test_sem_palavra_positiva_e_descartado_quando_a_ia_esta_desligada(monkeypatch):
+    _com_pre_triagem(monkeypatch, ligada=False)
     assert "palavra-chave" in _filtro_local(_item(description="Aquisição de materiais hospitalares"), datetime.now())
+
+
+def test_palavra_positiva_deixa_de_ser_obrigatoria_com_a_pre_triagem_ligada(monkeypatch):
+    # Com o perfil em linguagem natural e a IA ligada, quem julga o objeto é o modelo, não a lista de palavras.
+    _com_pre_triagem(monkeypatch, ligada=True)
+    assert _filtro_local(_item(description="Aquisição de materiais hospitalares"), datetime.now()) is None
 
 
 def test_palavra_negativa():

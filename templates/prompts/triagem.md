@@ -1,4 +1,4 @@
-<!-- v1 -->
+<!-- v2 -->
 # Tarefa: triagem de relevância
 
 Avalie se a licitação abaixo é uma oportunidade adequada para a empresa descrita, que atua como
@@ -9,6 +9,19 @@ de solução própria.
 
 ## Perfil resumido da empresa
 {{ empresa_resumo }}
+
+{% if perfil.ativo %}
+## O que a empresa BUSCA (escrito pelo dono, em linguagem natural)
+{{ perfil.buscamos or "(não informado)" }}
+
+## O que a empresa EVITA
+{{ perfil.evitamos or "(não informado)" }}
+
+Estes dois blocos têm prioridade sobre os critérios genéricos abaixo: se o edital bater em algo que a empresa
+evita, o score deve cair para a faixa baixa mesmo que o objeto seja software; se for exatamente o que ela busca,
+o score deve subir. Use o edital para verificar exigências que o objeto não mostra (presença física, marca,
+atestado específico) e cite na justificativa qual trecho fundamenta a decisão.
+{% endif %}
 
 ## Dados da licitação (PNCP)
 - Órgão: {{ op.orgao_nome }} ({{ op.esfera }} / {{ op.uf }} / {{ op.municipio }})

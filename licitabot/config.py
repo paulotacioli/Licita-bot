@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     claude_cli_path: str = ""
     claude_code_oauth_token: str = ""
     anthropic_api_key: str = ""
+    llm_model_pretriagem: str = "haiku"  # classifica só pelo objeto, em lote: precisa ser barato
     llm_model_triagem: str = "sonnet"
     llm_model_analise: str = "opus"
     llm_model_redacao: str = "opus"
@@ -162,7 +163,27 @@ class Precos(BaseModel):
     fator_impostos: float = 0.16  # ISS + PIS/COFINS + IRPJ/CSLL aproximado (Lucro Presumido)
 
 
+class PerfilInteresse(BaseModel):
+    """O que a empresa busca e evita, em linguagem natural. Vai para os prompts de triagem.
+
+    `buscamos`/`evitamos` são texto livre escrito pelo dono da empresa. `pre_triagem_ia` liga a
+    classificação por IA do objeto do edital antes de baixar qualquer PDF; com ela ligada, as
+    palavras positivas deixam de ser obrigatórias (as negativas continuam como corte barato).
+    """
+
+    buscamos: str = ""
+    evitamos: str = ""
+    pre_triagem_ia: bool = False
+    lote_pre_triagem: int = 40
+    maximo_por_rodada: int = 400
+
+    @property
+    def ativo(self) -> bool:
+        return bool(self.buscamos.strip() or self.evitamos.strip())
+
+
 class Triagem(BaseModel):
+    perfil: PerfilInteresse = Field(default_factory=PerfilInteresse)
     termos_busca: list[str] = Field(default_factory=lambda: ["software", "sistema", "desenvolvimento de sistema"])
     palavras_negativas: list[str] = Field(default_factory=list)
     palavras_positivas: list[str] = Field(default_factory=list)  # vazio = não exige

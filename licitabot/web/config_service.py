@@ -83,6 +83,28 @@ def _valida_cpf(v: Any) -> str | None:
 
 SECOES: list[Secao] = [
     Secao(
+        slug="perfil",
+        titulo="Perfil de interesse",
+        arquivo="triagem.yaml",
+        descricao="Escreva com suas palavras o que vale a pena e o que não vale. A IA usa isto para julgar cada edital.",
+        campos=[
+            Campo("perfil.buscamos", "O que buscamos", "area", obrigatorio=True,
+                  ajuda="Descreva os tipos de contratação que interessam: objeto, forma de trabalho, modelo comercial. "
+                        "Exemplo: sistemas e softwares sob demanda, sustentação, SaaS próprio, trabalho remoto."),
+            Campo("perfil.evitamos", "O que evitamos", "area",
+                  ajuda="O que deve ser descartado mesmo que envolva software. Exemplo: exigência de equipe presencial, "
+                        "revenda de licença de fabricante, outsourcing de postos, hardware."),
+            Campo("perfil.pre_triagem_ia", "Pré-triagem por IA ligada", "booleano",
+                  ajuda="A IA lê o objeto de cada edital novo, em lotes, com o modelo mais barato, e descarta o que não "
+                        "combina antes de baixar qualquer PDF. Com isto ligado, as palavras positivas dos filtros técnicos "
+                        "deixam de ser obrigatórias. Exigências que o objeto não mostra, como presença física, são "
+                        "verificadas depois, na triagem completa que lê o edital."),
+            Campo("perfil.lote_pre_triagem", "Objetos por chamada à IA", "inteiro", minimo=5, maximo=60),
+            Campo("perfil.maximo_por_rodada", "Máximo por rodada", "inteiro", minimo=10, maximo=5000,
+                  ajuda="Quantos editais a pré-triagem avalia por execução. O restante fica para a próxima."),
+        ],
+    ),
+    Secao(
         slug="notificacoes",
         titulo="Notificações",
         arquivo="notificacoes.yaml",
@@ -100,15 +122,15 @@ SECOES: list[Secao] = [
     ),
     Secao(
         slug="filtros",
-        titulo="Filtros de busca",
+        titulo="Filtros técnicos",
         arquivo="triagem.yaml",
-        descricao="O que o robô procura no PNCP e o que ele descarta antes de gastar IA.",
+        descricao="Cortes estruturais e baratos, aplicados antes da IA. Os termos de busca definem o que é pesquisado no PNCP.",
         campos=[
             Campo("termos_busca", "Termos pesquisados no PNCP", "lista", obrigatorio=True,
                   ajuda="Um termo por linha. Cada termo vira uma busca separada no PNCP."),
             Campo("palavras_positivas", "Palavras que o objeto precisa ter", "lista",
-                  ajuda="Um item por linha. O objeto do edital precisa conter ao menos uma delas, "
-                        "senão é descartado. Deixe vazio para não exigir nenhuma."),
+                  ajuda="Um item por linha. Só é obrigatório quando a pré-triagem por IA está desligada; com ela "
+                        "ligada, quem julga o objeto é a IA a partir do seu perfil de interesse."),
             Campo("palavras_negativas", "Palavras que descartam na hora", "lista",
                   ajuda="Um item por linha. Se o objeto contiver qualquer uma, o edital é descartado "
                         "sem chamar a IA. Serve para cortar compra de hardware, veículos e afins."),
@@ -282,6 +304,8 @@ def _converter(campo: Campo, bruto: str) -> tuple[Any, str | None]:
         return numero, None
     if campo.obrigatorio and not bruto:
         return None, f"{campo.label}: campo obrigatório."
+    if campo.tipo == "area":
+        return " ".join(bruto.split()) if "\n" not in bruto.strip() else bruto.strip(), None
     return bruto, None
 
 

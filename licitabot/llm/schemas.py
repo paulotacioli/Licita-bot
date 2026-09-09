@@ -9,6 +9,16 @@ from pydantic import BaseModel, Field
 Categoria = Literal["desenvolvimento", "licenciamento_saas", "manutencao", "outsourcing", "hardware_misto", "irrelevante"]
 
 
+class PreTriagemItem(BaseModel):
+    ref: int = Field(description="o número de referência do item, copiado da entrada")
+    veredito: Literal["relevante", "irrelevante", "incerto"]
+    motivo: str = Field(description="uma frase curta, em português, dizendo por quê")
+
+
+class PreTriagemLote(BaseModel):
+    itens: list[PreTriagemItem]
+
+
 class TriagemResult(BaseModel):
     relevante: bool
     score: int = Field(ge=0, le=100, description="0-100: quão adequado para uma fábrica de software / SaaS")

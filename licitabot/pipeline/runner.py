@@ -186,10 +186,18 @@ def process_pending(limite: int = 20, ate: str = "notify") -> dict[str, int]:
         if restante_dia == 0:
             # só etapas baratas (ingestão e triagem) para manter a fila pronta para amanhã
             ativos = [st for st in ativos if st in (Status.DESCOBERTA, Status.BAIXADA)]
+        from licitabot.pipeline.pretriagem import ativa as pre_triagem_ativa
+
         q = (
             select(Oportunidade.id)
             .where(Oportunidade.status.in_([str(s) for s in ativos]))
             .where(Oportunidade.tentativas < MAX_TENTATIVAS)
+        )
+        if pre_triagem_ativa():
+            # o que está em DESCOBERTA só entra na ingestão depois de a IA olhar o objeto
+            q = q.where((Oportunidade.status != Status.DESCOBERTA) | (Oportunidade.pre_triagem != ""))
+        q = (
+            q
             .order_by(Oportunidade.data_encerramento_proposta)
             .limit(limite)
         )

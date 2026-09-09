@@ -38,7 +38,10 @@ def _filtro_local(item: SearchItem, agora: datetime) -> str | None:
     # Remove o prefixo "[Nome do Portal]" e "sistema de registro de preços" (SRP), que não indicam software
     texto_pos = re.sub(r"\[[^\]]{0,60}\]", " ", texto)
     texto_pos = re.sub(r"sistemas?\s+de\s+registro\s+de\s+pre[çc]os?", " ", texto_pos)
-    if tri.palavras_positivas and not any(p.lower() in texto_pos for p in tri.palavras_positivas):
+    # Com a pré-triagem por IA ligada, quem julga o objeto é o modelo; a lista de palavras positivas vira apenas
+    # referência. Sem IA, ela continua sendo o corte que evita baixar edital de tudo quanto é coisa.
+    exigir_positiva = bool(tri.palavras_positivas) and not (tri.perfil.pre_triagem_ia and tri.perfil.ativo)
+    if exigir_positiva and not any(p.lower() in texto_pos for p in tri.palavras_positivas):
         return "objeto sem palavra-chave de software"
     for neg in tri.palavras_negativas:
         if neg.lower() in texto:
@@ -135,4 +138,9 @@ def run_discovery(termos: list[str] | None = None, max_paginas: int | None = Non
                 stats["erros"] += 1
                 session.rollback()
     log.info("Descoberta concluída: %s", stats)
+    from licitabot.pipeline.pretriagem import ativa, pretriar_pendentes
+
+    if ativa():
+        pre = pretriar_pendentes()
+        stats.update({f"pre_triagem_{k}": v for k, v in pre.items()})
     return stats

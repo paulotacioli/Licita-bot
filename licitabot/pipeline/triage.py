@@ -60,6 +60,7 @@ def triage(oportunidade_id: int, client=None) -> TriagemResult:
         prompt = render_prompt(
             "triagem",
             empresa_resumo=empresa_resumo(),
+            perfil=tri.perfil,
             op=op,
             itens=itens[:40],
             valor_estimado=f"R$ {op.valor_estimado:,.2f}" if op.valor_estimado else "não informado",

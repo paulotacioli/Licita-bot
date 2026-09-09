@@ -38,6 +38,7 @@ Todos os comandos abaixo pressupõem `.\.venv\Scripts\licitabot.exe` (ou ative o
 | Comando | O que faz |
 |---|---|
 | `licitabot discover` | Busca editais abertos no PNCP (termos em `config/triagem.yaml`) e aplica filtros locais |
+| `licitabot pretriar` | Pré-triagem por IA pelo objeto (sem baixar edital), conforme o perfil de interesse |
 | `licitabot process` | Avança todas as oportunidades pendentes até o e-mail de aprovação |
 | `licitabot run <id> --step analysis` | Executa uma etapa específica (`ingest`, `triage`, `analysis`, `pricing`, `docgen`, `prepare`, `notify`, `submit`, `monitor`) |
 | `licitabot list --status ANALISADA` / `licitabot show <id>` | Consulta |
@@ -59,6 +60,23 @@ Operação contínua: `scripts\install_task_scheduler.ps1` registra worker e web
 - Limite de **`LIMITE_DIARIO_ENVIOS`** (padrão 50) licitações por dia; o excedente fica na fila para o dia seguinte. Ingestão e triagem continuam rodando para a fila estar pronta.
 - Às `HORA_RESUMO_DIARIO` (padrão 8h) sai o **resumo diário**: novas compatíveis nas últimas 24h, enviadas ontem, fila, erros e pendências de onboarding. Para enviar agora: `licitabot resumo-diario`. Teste de SMTP: `licitabot email-teste`.
 
+## Perfil de interesse e pré-triagem por IA
+
+Em vez de listas de palavras-chave, você descreve em linguagem natural, no painel (Configurações > Perfil de
+interesse), **o que a empresa busca** e **o que evita**. Esse texto entra em duas etapas:
+
+1. **Pré-triagem** (`licitabot pretriar`, também automática no worker e ao fim de cada descoberta): a IA lê só o
+   objeto publicado no PNCP, em lotes de 40 com o modelo mais barato (`LLM_MODEL_PRETRIAGEM=haiku`), e devolve
+   `relevante`, `irrelevante` ou `incerto` com o motivo. O irrelevante é descartado antes de baixar qualquer PDF;
+   relevante e incerto seguem para a ingestão. Só o que o objeto diz é julgado: exigências que ele não mostra,
+   como presença física, ficam para a etapa seguinte.
+2. **Triagem completa**: a que já existia, que lê o edital, agora recebe o mesmo perfil e o prioriza sobre os
+   critérios genéricos, citando o trecho que fundamenta a nota.
+
+Com `perfil.pre_triagem_ia: true` em `config/triagem.yaml`, as palavras positivas deixam de ser obrigatórias na
+descoberta; as negativas continuam como corte barato. O veredito e o motivo ficam na licitação
+(`pre_triagem`, `pre_triagem_motivo`) e aparecem no painel.
+
 ## Painel web
 
 `licitabot web` sobe o painel. No primeiro acesso ele pede para criar um usuário e uma senha; a senha
@@ -71,7 +89,8 @@ Além do acompanhamento das licitações, o painel edita a configuração sem pr
 | Seção | Arquivo | O que ajusta |
 |---|---|---|
 | Notificações | `config/notificacoes.yaml` | Quem recebe os e-mails (vários endereços), limite diário, hora do resumo |
-| Filtros de busca | `config/triagem.yaml` | Termos pesquisados no PNCP, palavras que exigem ou descartam, UFs, prazo e notas de corte |
+| Perfil de interesse | `config/triagem.yaml` | O que buscamos e evitamos, em texto livre; liga a pré-triagem por IA |
+| Filtros técnicos | `config/triagem.yaml` | Termos pesquisados no PNCP, palavras negativas, UFs, prazo e notas de corte |
 | Preços | `config/precos.yaml` | Valor/hora, margem, impostos, descontos, tetos e preços de SaaS/PF/UST |
 | Empresa | `config/empresa.yaml` | Dados cadastrais, representante que assina e dados bancários |
 
