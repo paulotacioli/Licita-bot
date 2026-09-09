@@ -35,14 +35,70 @@ class LLMResult(BaseModel):
 ALIAS_PARA_ID = {"sonnet": "claude-sonnet-5", "opus": "claude-opus-5", "haiku": "claude-haiku-4-5"}
 
 
-def get_llm_client():
-    """Fábrica: backend configurado em LLM_BACKEND (claude_code = assinatura do Claude Code; api = API Anthropic)."""
+PROVEDORES = ("openai", "claude")
+
+
+def provedor_do_modelo(model: str) -> tuple[str, str]:
+    """'openai:gpt-5-mini' -> ('openai', 'gpt-5-mini'); 'haiku' -> ('claude', 'haiku')."""
+    if ":" in model:
+        prov, nome = model.split(":", 1)
+        prov = prov.strip().lower()
+        if prov in PROVEDORES:
+            return prov, nome.strip()
+    return "claude", model
+
+
+def _cliente_claude():
     s = get_settings()
     if s.llm_backend.lower() == "api":
         return ClaudeClient()
     from licitabot.llm.claude_code import ClaudeCodeClient
 
     return ClaudeCodeClient()
+
+
+def _cliente_openai():
+    from licitabot.llm.openai_client import OpenAIClient
+
+    return OpenAIClient()
+
+
+class LLMRouter:
+    """Escolhe o backend pelo prefixo do modelo de cada chamada, criando cada cliente uma única vez.
+
+    Permite, por exemplo, pré-triagem em `openai:gpt-5-mini` e análise em `opus` sem tocar nas etapas:
+    elas continuam chamando `structured(modelo, ...)` como sempre.
+    """
+
+    def __init__(self):
+        self._clientes: dict[str, Any] = {}
+
+    def _para(self, model: str):
+        prov, _ = provedor_do_modelo(model)
+        if prov not in self._clientes:
+            self._clientes[prov] = _cliente_openai() if prov == "openai" else _cliente_claude()
+        return self._clientes[prov]
+
+    @property
+    def supports_pdf(self) -> bool:
+        # quem lê PDF é a etapa de análise; a resposta depende do backend que atende o modelo dela
+        return bool(getattr(self._para(get_settings().llm_model_analise), "supports_pdf", False))
+
+    def structured(self, model: str, *args, **kwargs):
+        _, nome = provedor_do_modelo(model)
+        return self._para(model).structured(nome, *args, **kwargs)
+
+    def text(self, model: str, *args, **kwargs):
+        _, nome = provedor_do_modelo(model)
+        return self._para(model).text(nome, *args, **kwargs)
+
+
+def get_llm_client():
+    """Fábrica: um roteador que despacha cada chamada pelo prefixo do modelo (`openai:`, `claude:` ou nenhum).
+
+    Sem prefixo, vale o Claude no backend de LLM_BACKEND (claude_code = assinatura; api = ANTHROPIC_API_KEY).
+    """
+    return LLMRouter()
 
 
 class ClaudeClient:

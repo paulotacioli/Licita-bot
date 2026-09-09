@@ -221,9 +221,19 @@ def llm_teste():
 
     s = get_settings()
     cl = get_llm_client()
-    rprint(f"Backend: {s.llm_backend} · modelo de triagem: {s.llm_model_triagem}")
-    obj, meta = cl.structured(s.llm_model_triagem, Ping, [text_block("Responda ok=true e uma saudação curta em português.")], effort="low", max_tokens=200)
-    rprint(f"[green]OK[/green] {obj.mensagem} (modelo {meta.model}, {meta.tokens_in}+{meta.tokens_out} tokens)")
+    etapas = {"pré-triagem": s.llm_model_pretriagem, "triagem": s.llm_model_triagem, "análise": s.llm_model_analise, "redação": s.llm_model_redacao}
+    rprint(f"Backend Claude: {s.llm_backend}")
+    falhas = 0
+    for modelo in dict.fromkeys(etapas.values()):
+        usos = ", ".join(k for k, v in etapas.items() if v == modelo)
+        try:
+            obj, meta = cl.structured(modelo, Ping, [text_block("Responda ok=true e uma saudação curta em português.")], effort="low", max_tokens=400)
+            rprint(f"[green]OK[/green] {modelo} ({usos}): {obj.mensagem} · {meta.tokens_in}+{meta.tokens_out} tokens")
+        except Exception as e:  # noqa: BLE001
+            falhas += 1
+            rprint(f"[red]FALHOU[/red] {modelo} ({usos}): {str(e)[:300]}")
+    if falhas:
+        raise typer.Exit(1)
 
 
 @app.command("email-teste")

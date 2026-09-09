@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     claude_cli_path: str = ""
     claude_code_oauth_token: str = ""
     anthropic_api_key: str = ""
+    # OpenAI, opcional: use o prefixo "openai:" no modelo da etapa (ex.: LLM_MODEL_PRETRIAGEM=openai:gpt-5-mini)
+    openai_api_key: str = ""
+    openai_base_url: str = ""
+    # Modelos por etapa. Sem prefixo = Claude; "openai:<modelo>" = OpenAI.
     llm_model_pretriagem: str = "haiku"  # classifica só pelo objeto, em lote: precisa ser barato
     llm_model_triagem: str = "sonnet"
     llm_model_analise: str = "opus"

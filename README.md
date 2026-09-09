@@ -74,7 +74,13 @@ interesse), **o que a empresa busca** e **o que evita**. Esse texto entra em dua
    critérios genéricos, citando o trecho que fundamenta a nota.
 
 Com `perfil.pre_triagem_ia: true` em `config/triagem.yaml`, as palavras positivas deixam de ser obrigatórias na
-descoberta; as negativas continuam como corte barato. O veredito e o motivo ficam na licitação
+descoberta; as negativas continuam como corte barato.
+
+**Provedor por etapa.** Cada `LLM_MODEL_*` aceita um prefixo de provedor: sem prefixo é Claude (pela assinatura do
+Claude Code ou pela API, conforme `LLM_BACKEND`); `openai:<modelo>` manda a etapa para a OpenAI, com
+`OPENAI_API_KEY` no `.env`. Exemplo para baratear a pré-triagem: `LLM_MODEL_PRETRIAGEM=openai:gpt-5-mini`.
+`licitabot llm-teste` testa cada modelo configurado no provedor certo. O backend OpenAI não anexa PDF: a análise
+usa o texto extraído, como já faz o backend da assinatura. O veredito e o motivo ficam na licitação
 (`pre_triagem`, `pre_triagem_motivo`) e aparecem no painel.
 
 ## Painel web

@@ -44,9 +44,9 @@ PASSOS: list[tuple[str, str, str, bool]] = [
     ),
     (
         "claude_code",
-        "Conectar a IA à sua assinatura do Claude Code",
-        "No terminal, rode `claude setup-token` (abre o navegador para autorizar) e cole o token em CLAUDE_CODE_OAUTH_TOKEN no .env. "
-        "Depois valide com `licitabot llm-teste`. Sem isso, triagem, análise e redação não rodam.",
+        "Conectar a IA",
+        "Etapas no Claude: rode `claude setup-token` e cole o token em CLAUDE_CODE_OAUTH_TOKEN no .env (ou LLM_BACKEND=api + "
+        "ANTHROPIC_API_KEY). Etapas com modelo `openai:`: OPENAI_API_KEY no .env. Valide com `licitabot llm-teste`.",
         True,
     ),
     (
@@ -145,12 +145,7 @@ def _verificar_automaticos(session) -> None:
 
     ok_login, msg_login = sessao_valida_cache()
     checks["login_navegador"] = (ok_login, msg_login)
-    if s.llm_backend.lower() == "api":
-        checks["claude_code"] = (bool(s.anthropic_api_key), "" if s.anthropic_api_key else "ANTHROPIC_API_KEY ausente")
-    else:
-        from licitabot.llm.claude_code import cli_verificado
-
-        checks["claude_code"] = cli_verificado()
+    checks["claude_code"] = _verifica_ia(s)
     from licitabot.config import destinatarios as _dest
     ok_mail = bool(s.smtp_user and s.smtp_password and _dest() and len(s.approval_secret) >= 32)
     checks["email_config"] = (ok_mail, "" if ok_mail else "SMTP/OWNER_EMAIL/APPROVAL_SECRET incompletos")
@@ -164,6 +159,28 @@ def _verificar_automaticos(session) -> None:
             passo.observacao = obs
             session.add(passo)
     session.commit()
+
+
+def _verifica_ia(s) -> tuple[bool, str]:
+    """Um só passo cobre todos os provedores em uso pelas quatro etapas (pré-triagem, triagem, análise, redação)."""
+    from licitabot.llm.client import provedor_do_modelo
+
+    modelos = [s.llm_model_pretriagem, s.llm_model_triagem, s.llm_model_analise, s.llm_model_redacao]
+    provedores = {provedor_do_modelo(m)[0] for m in modelos}
+    problemas: list[str] = []
+    if "openai" in provedores and not s.openai_api_key:
+        problemas.append("OPENAI_API_KEY ausente (há etapa com modelo openai:)")
+    if "claude" in provedores:
+        if s.llm_backend.lower() == "api":
+            if not s.anthropic_api_key:
+                problemas.append("ANTHROPIC_API_KEY ausente")
+        else:
+            from licitabot.llm.claude_code import cli_verificado
+
+            ok, obs = cli_verificado()
+            if not ok:
+                problemas.append(obs)
+    return (not problemas, "; ".join(problemas))
 
 
 def onboarding_completo() -> tuple[bool, list[str]]:
