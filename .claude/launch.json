@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "licitabot-web",
+      "runtimeExecutable": ".venv\\Scripts\\licitabot.exe",
+      "runtimeArgs": ["web"],
+      "port": 8765
+    }
+  ]
+}

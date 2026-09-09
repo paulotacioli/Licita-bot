@@ -1,0 +1,76 @@
+# Filtros de descoberta e triagem (aplicados ANTES da IA, para economizar).
+
+termos_busca:
+  - software
+  - "desenvolvimento de sistema"
+  - "fábrica de software"
+  - "sistema web"
+  - "sistema informatizado"
+  - "solução tecnológica"
+  - "licenciamento de software"
+  - "licença de uso de software"
+  - SaaS
+  - "plataforma digital"
+  - aplicativo
+  - "portal web"
+  - "sustentação de sistemas"
+  - "manutenção de sistemas"
+  - "pontos de função"
+
+# O objeto precisa conter pelo menos UMA destas palavras (a busca do PNCP é difusa e traz muito ruído)
+palavras_positivas:
+  - software
+  - sistema
+  - sistemas
+  - aplicativo
+  - aplicação web
+  - plataforma digital
+  - plataforma de
+  - portal web
+  - portal da transparência
+  - portal eletrônico
+  - licenciamento
+  - licença de uso
+  - saas
+  - desenvolvimento de sistema
+  - desenvolvimento de software
+  - desenvolvimento de solução
+  - desenvolvimento de aplicativo
+  - desenvolvimento e manutenção
+  - desenvolvimento, manutenção
+  - fábrica de software
+  - informatizad
+  - tecnologia da informação
+  - solução tecnológica
+  - solução de tic
+  - erp
+
+# Se o objeto contiver estas palavras, descarta sem chamar a IA
+palavras_negativas:
+  - "aquisição de computadores"
+  - "notebooks"
+  - "impressoras"
+  - "toner"
+  - "cabeamento"
+  - "hardware"
+  - "servidores físicos"
+  - "câmeras"
+  - "videomonitoramento"
+  - "workstation"
+  - "macbook"
+  - "all in one"
+  - "desktop"
+  - "rádio"
+  - "veículos"
+  - "médico-hospitalar"
+  - "medicamentos"
+  - "gêneros alimentícios"
+
+modalidades_aceitas: [6, 4, 8, 12]   # Pregão Eletrônico, Concorrência Eletrônica, Dispensa, Credenciamento
+ufs: []                              # vazio = Brasil inteiro; ex.: ["SP", "RJ", "MG"]
+esferas: []                          # vazio = todas; ex.: ["Federal"]
+prazo_minimo_dias: 3                 # mínimo de dias até o encerramento das propostas
+score_minimo: 60
+score_zona_cinzenta: 40
+categorias_aceitas: [desenvolvimento, licenciamento_saas, manutencao]
+max_paginas_por_termo: 50            # 50 x 100 = até 5.000 resultados por termo

@@ -1,0 +1,63 @@
+# Dados da empresa licitante. Tudo aqui vai para propostas e declarações — confira antes de aprovar propostas.
+# Fonte: Receita Federal (BrasilAPI) em 08/09/2026 + informações do responsável.
+
+razao_social: "LTC CONSULTORIA DE SOLUCOES EM SISTEMAS LTDA"
+nome_fantasia: "LTC Consultoria"
+cnpj: "61.136.140/0001-86"
+inscricao_estadual: "ISENTO"
+inscricao_municipal: ""
+porte: "EPP"            # Empresa de Pequeno Porte (LC 123/2006) — direito aos benefícios ME/EPP
+optante_simples: true
+endereco: "Rua Luís Góis, 1787, Sala 1 - Mirandópolis"
+cidade: "São Paulo"
+uf: "SP"
+cep: "04043-400"
+telefone: "(11) 8213-0398"
+email: "paulotaciolicavaglieri@gmail.com"
+site: ""
+cnaes: ["6399-2/00", "6204-0/00", "6311-9/00", "8219-9/99"]
+# Sugestão: incluir 6201-5/01 (desenvolvimento sob encomenda) e 6202-3/00 (software customizável) no contrato social,
+# pois editais de fábrica de software costumam exigir objeto social compatível.
+
+# PENDENTE: quem assina as propostas (sócio-administrador). Sócios na Receita: LUIS TACIOLI CAVAGLIERI e
+# VIVIAN FELTRIN TOSI CAVAGLIERI. Preencha nome completo e CPF do signatário.
+representante:
+  nome: ""
+  cpf: ""
+  cargo: "Sócio-administrador"
+  email: "paulotaciolicavaglieri@gmail.com"
+  telefone: "(11) 8213-0398"
+
+banco:
+  banco: ""
+  agencia: ""
+  conta: ""
+  tipo: "Conta corrente"
+
+# --- Perfil comercial/técnico (usado pela IA para redigir a proposta técnica; NUNCA invente dados) ---
+descricao_empresa: >
+  A LTC Consultoria de Soluções em Sistemas é uma empresa de tecnologia, sediada em São Paulo/SP, especializada em
+  consultoria e desenvolvimento de software sob demanda (fábrica de software) e no licenciamento de soluções
+  próprias no modelo SaaS para organizações públicas e privadas.
+
+servicos:
+  - Desenvolvimento de sistemas web e mobile sob demanda (fábrica de software)
+  - Sustentação, manutenção evolutiva e corretiva de sistemas
+  - Consultoria em tecnologia da informação e arquitetura de soluções
+  - Integração de sistemas e APIs
+  - Licenciamento de software como serviço (SaaS)
+
+produtos_saas: []
+#  - nome: "Nome do produto"
+#    descricao: "O que faz"
+#    funcionalidades: ["...", "..."]
+#    preco_usuario_mes: 49.90
+
+metodologia: >
+  Desenvolvimento ágil (Scrum/Kanban) com entregas incrementais, gestão de requisitos, testes automatizados,
+  integração contínua, documentação técnica e transferência de conhecimento ao contratante.
+
+equipe: []
+diferenciais: []
+clientes_referencia: []   # só clientes reais com atestado no cofre
+validade_proposta_dias: 60

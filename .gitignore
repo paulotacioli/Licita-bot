@@ -1,0 +1,16 @@
+.env
+data/
+cofre/*
+!cofre/README.md
+!cofre/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+*.log
+tests/fixtures/editais/*.pdf
+tests/fixtures/editais/*.zip

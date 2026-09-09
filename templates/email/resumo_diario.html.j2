@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Resumo diário</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;padding:24px;color:#1f2937">
+<div style="max-width:760px;margin:0 auto;background:#fff;border-radius:10px;padding:26px">
+  <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot · resumo diário</p>
+  <h1 style="font-size:20px;margin:0 0 14px">{{ data }}</h1>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px">
+    <tr><td style="padding:5px 0;color:#6b7280">Novas licitações compatíveis (24h)</td><td><b>{{ novas|length }}</b></td></tr>
+    <tr><td style="padding:5px 0;color:#6b7280">Enviadas por e-mail ontem</td><td><b>{{ enviados_ontem }}</b> (limite diário {{ limite }})</td></tr>
+    <tr><td style="padding:5px 0;color:#6b7280">Em análise/preparação</td><td><b>{{ relevantes|length }}</b></td></tr>
+    <tr><td style="padding:5px 0;color:#6b7280">Fila (aguardando processamento)</td><td><b>{{ fila }}</b></td></tr>
+    <tr><td style="padding:5px 0;color:#6b7280">Com erro (ver dashboard)</td><td><b>{{ erros }}</b></td></tr>
+  </table>
+  {% if not ok_onb %}
+  <div style="background:#fef3c7;border:1px solid #f59e0b;padding:10px 12px;border-radius:8px;margin-bottom:16px;font-size:13px">
+    <b>Envio automático pelo portal bloqueado</b> até concluir: {{ faltando|join("; ") }}
+  </div>
+  {% endif %}
+  <h2 style="font-size:16px;margin:18px 0 8px">Novas nas últimas 24h</h2>
+  {% if novas %}
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px">Prazo</th><th style="text-align:left;padding:6px">Órgão</th><th style="text-align:left;padding:6px">Objeto</th><th style="text-align:right;padding:6px">Valor est.</th><th style="padding:6px">Status</th></tr>
+    {% for o in novas %}
+    <tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
+      <td style="padding:6px">{{ o.orgao_nome[:40] }}<br><span style="color:#6b7280">{{ o.esfera }} · {{ o.uf }} · {{ o.modalidade_nome }}</span></td>
+      <td style="padding:6px"><a href="{{ pncp(o) }}">{{ o.objeto[:180] }}</a></td>
+      <td style="padding:6px;text-align:right">{{ fmt(o.valor_estimado) }}</td>
+      <td style="padding:6px;text-align:center;color:#6b7280">{{ o.status }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p style="color:#6b7280">Nenhuma nova licitação compatível nas últimas 24h.</p>{% endif %}
+  <p style="font-size:12px;color:#6b7280;margin-top:22px">Dashboard: <a href="{{ dashboard }}">{{ dashboard }}</a></p>
+</div>
+</body></html>

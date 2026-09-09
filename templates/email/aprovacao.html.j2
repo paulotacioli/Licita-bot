@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Aprovar proposta</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;padding:24px;color:#1f2937">
+<div style="max-width:720px;margin:0 auto;background:#fff;border-radius:10px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+  <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot · solicitação de aprovação #{{ op.id }}{% if dry_run %} · <b style="color:#b45309">MODO DRY-RUN (nada será enviado de verdade)</b>{% endif %}</p>
+  <h1 style="font-size:20px;margin:0 0 4px">{{ op.orgao_nome }} <span style="color:#6b7280;font-weight:normal">({{ op.esfera }} · {{ op.uf }})</span></h1>
+  <p style="margin:0 0 14px;color:#374151">{{ op.modalidade_nome }} · {{ op.numero_controle_pncp }}{% if op.uasg %} · UASG {{ op.uasg }}{% endif %}</p>
+  <p style="margin:0 0 16px"><b>Objeto:</b> {{ op.objeto }}</p>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:14px">
+    <tr><td style="padding:6px 0;color:#6b7280">Encerramento das propostas</td><td style="padding:6px 0"><b>{{ prazo }}</b> (faltam {{ horas_restantes }})</td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280">Valor total proposto</td><td style="padding:6px 0"><b style="font-size:16px">{{ total }}</b> · estimado {{ estimado }} · desconto {{ desconto }}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280">Este link expira em</td><td style="padding:6px 0">{{ expira }}</td></tr>
+  </table>
+
+  {% if informativo %}
+  <div style="background:#e0f2fe;border:1px solid #38bdf8;padding:12px;border-radius:8px;margin:18px 0">
+    <b>Licitação compatível, análise e documentos prontos.</b> O envio automático pelo portal ainda não está disponível:
+    {{ motivo_portal }}.<br>Pasta com os documentos: <code>{{ op.pasta }}\proposta</code> · <a href="{{ link_pncp }}">Edital no PNCP</a>
+  </div>
+  {% elif link_aprovar %}
+  <div style="text-align:center;margin:22px 0">
+    <a href="{{ link_aprovar }}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:bold;padding:14px 30px;border-radius:8px;margin:6px">✔ APROVAR E ENVIAR</a>
+    <a href="{{ link_rejeitar }}" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;font-weight:bold;padding:14px 30px;border-radius:8px;margin:6px">✖ REJEITAR</a>
+    <p style="font-size:12px;color:#6b7280">O link abre uma página de confirmação. Nada é enviado sem o seu clique final.</p>
+  </div>
+  {% else %}
+  <div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px;border-radius:8px;margin:18px 0">
+    <b>Para decidir, responda este e-mail</b> com a primeira linha <b>APROVAR</b> ou <b>REJEITAR</b>.
+  </div>
+  {% endif %}
+
+  <h2 style="font-size:16px;margin:22px 0 8px">Itens</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px">Item</th><th style="text-align:left;padding:6px">Descrição</th><th style="text-align:right;padding:6px">Qtd</th><th style="text-align:right;padding:6px">Est. unit.</th><th style="text-align:right;padding:6px">Proposto unit.</th><th style="text-align:right;padding:6px">Total</th></tr>
+    {% for i in itens %}
+    <tr style="{% if not i.participar %}color:#9ca3af{% endif %};border-bottom:1px solid #e5e7eb">
+      <td style="padding:6px">{{ i.numero_item }}</td>
+      <td style="padding:6px">{{ i.descricao[:120] }}{% if not i.participar %}<br><i>não participa: {{ i.justificativa_preco[:100] }}</i>{% endif %}</td>
+      <td style="padding:6px;text-align:right">{{ "%g"|format(i.quantidade) }} {{ i.unidade }}</td>
+      <td style="padding:6px;text-align:right">{{ fmt(i.valor_unit_estimado) }}</td>
+      <td style="padding:6px;text-align:right"><b>{{ fmt(i.valor_unit_proposto) }}</b></td>
+      <td style="padding:6px;text-align:right">{{ fmt(i.valor_total_proposto) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% if req and req.alertas %}
+  <h2 style="font-size:16px;margin:22px 0 8px;color:#b45309">Alertas da análise</h2>
+  <ul style="font-size:13px;margin:0;padding-left:20px">{% for a in req.alertas %}<li>{{ a }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <h2 style="font-size:16px;margin:22px 0 8px">Documentos</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    {% for d in docs %}
+    <tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:5px">{{ d.tipo }}</td>
+      <td style="padding:5px">{{ d.titulo }}</td>
+      <td style="padding:5px;{% if d.status in ('FALTANDO','VENCIDO') %}color:#dc2626;font-weight:bold{% elif d.status == 'PRECISA_ASSINATURA' %}color:#b45309{% else %}color:#16a34a{% endif %}">{{ d.status }}</td>
+      <td style="padding:5px;color:#6b7280">{{ d.observacao[:80] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% if shots %}
+  <h2 style="font-size:16px;margin:22px 0 8px">Portal (prévia)</h2>
+  {% for i in shots %}<img src="cid:shot{{ i }}@licitabot" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px">{% endfor %}
+  {% endif %}
+
+  <p style="font-size:12px;color:#6b7280;margin-top:24px">Dashboard local: <a href="{{ dashboard }}">{{ dashboard }}</a> · Pasta: {{ op.pasta }}<br>
+  Proposta enviada é vinculante (Lei 14.133/2021, art. 156). Revise preços e documentos antes de aprovar.</p>
+</div>
+</body></html>

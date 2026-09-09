@@ -1,0 +1,32 @@
+# Regras de precificação. A IA apenas SUGERE horas; estas regras decidem o preço de cada licitação.
+#
+# Como o preço "justo" é decidido, item a item:
+#   1. custo = horas (sugeridas pela IA a partir do edital) x valor/hora do perfil; SaaS = usuários x preço/mês x meses.
+#   2. preco_base = custo x (1 + margem) / (1 - impostos).
+#   3. referência de mercado = valor estimado pelo órgão (vem de pesquisa de preços oficial).
+#      alvo = estimado x (1 - desconto_alvo). O preço final é o MAIOR entre preco_base e alvo (não faz dumping),
+#      limitado ao piso (estimado x (1 - desconto_maximo)) e ao teto (o próprio estimado; acima disso desclassifica).
+#   4. Se preco_base > estimado, o item é inexequível para nós e a empresa não participa dele.
+# Valores de referência (mercado brasileiro 2026, fábrica de software pequena/média): R$ 130-240/h.
+
+perfis_hora:
+  - { perfil: "Gerente de projetos", valor_hora: 220.0 }
+  - { perfil: "Analista de requisitos", valor_hora: 170.0 }
+  - { perfil: "Arquiteto de software", valor_hora: 240.0 }
+  - { perfil: "Desenvolvedor sênior", valor_hora: 190.0 }
+  - { perfil: "Desenvolvedor pleno", valor_hora: 150.0 }
+  - { perfil: "Analista de testes", valor_hora: 130.0 }
+  - { perfil: "Designer UX/UI", valor_hora: 150.0 }
+
+valor_hora_padrao: 160.0          # usado quando o perfil não é identificado
+preco_ponto_funcao: 750.0         # custo por Ponto de Função; com margem+impostos ~R$ 1.070/PF (federais 2025-26 pagam R$ 1.000-1.300)
+preco_ust: 90.0                   # custo por UST / hora de serviço técnico
+margem_minima: 0.20               # 20% sobre o custo
+fator_impostos: 0.16              # impostos aproximados embutidos no preço (Simples/Lucro Presumido serviços)
+desconto_alvo_vs_estimado: 0.10   # preço justo: 10% abaixo do estimado do órgão
+desconto_maximo_vs_estimado: 0.30 # piso = 70% do valor estimado (abaixo disso o órgão costuma exigir prova de exequibilidade)
+valor_maximo_proposta: 3000000    # teto absoluto por proposta (R$)
+valor_minimo_oportunidade: 20000  # ignora oportunidades abaixo disso (R$)
+preco_saas_usuario_mes: 49.90
+preco_saas_minimo_mensal: 1500.0
+horas_padrao_por_item_sem_estimativa: 160

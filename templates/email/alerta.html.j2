@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>{{ titulo }}</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;padding:24px;color:#1f2937">
+<div style="max-width:680px;margin:0 auto;background:#fff;border-radius:10px;padding:24px">
+  <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot{% if op %} · oportunidade #{{ op.id }}{% endif %}</p>
+  <h1 style="font-size:18px;margin:0 0 12px">{{ titulo }}</h1>
+  {% if op %}<p style="margin:0 0 12px;color:#374151"><b>{{ op.orgao_nome }}</b> · {{ op.numero_controle_pncp }}<br>{{ op.objeto[:300] }}</p>{% endif %}
+  <ul style="font-size:14px;padding-left:20px">{% for l in linhas %}<li style="margin-bottom:6px">{{ l }}</li>{% endfor %}</ul>
+</div>
+</body></html>

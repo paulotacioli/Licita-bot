@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Onboarding{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Onboarding {% if ok %}<span class="ok">completo</span>{% else %}<span class="warn">incompleto — etapas de portal bloqueadas</span>{% endif %}</h2>
+  {% if faltando %}<ul>{% for f in faltando %}<li class="warn">{{ f }}</li>{% endfor %}</ul>{% endif %}
+  <table>
+    <tr><th>#</th><th>Passo</th><th>Status</th><th>Observação</th><th></th></tr>
+    {% for p in passos %}
+    <tr>
+      <td>{{ p.ordem }}</td>
+      <td><b>{{ p.titulo }}</b><div class="muted">{{ p.descricao }}</div></td>
+      <td>{% if p.concluido %}<span class="ok">✔ feito</span>{% else %}<span class="bad">pendente</span>{% endif %}{% if p.verificacao_automatica %}<div class="muted">verificado automaticamente</div>{% endif %}</td>
+      <td class="muted">{{ p.observacao }}</td>
+      <td>{% if not p.verificacao_automatica %}
+        <form method="post" action="/onboarding/{{ p.chave }}"><input type="hidden" name="concluido" value="{{ '0' if p.concluido else '1' }}"><button class="btn">{{ "desmarcar" if p.concluido else "marcar feito" }}</button></form>
+      {% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Licita-Bot{% endblock %}</title>
+<style>
+  :root{--bg:#f5f7fa;--card:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--ok:#16a34a;--warn:#b45309;--bad:#dc2626;--brand:#1d4ed8}
+  body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  header{background:#0f172a;color:#fff;padding:12px 24px;display:flex;gap:18px;align-items:center}
+  header a{color:#cbd5e1;text-decoration:none}header a:hover{color:#fff}
+  main{max-width:1200px;margin:20px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#f3f4f6;font-weight:600}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#e5e7eb}
+  .s-AGUARDANDO_APROVACAO{background:#fef3c7;color:#92400e}.s-APROVADA,.s-ENVIADA,.s-DOCS_GERADOS,.s-PREPARADA_PORTAL{background:#dcfce7;color:#166534}
+  .s-ERRO,.s-BLOQUEADA{background:#fee2e2;color:#991b1b}.s-DESCARTADA,.s-REJEITADA,.s-EXPIRADA{background:#e5e7eb;color:#374151}
+  .btn{display:inline-block;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;text-decoration:none;color:var(--ink)}
+  .btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}.btn.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .muted{color:var(--muted)}.warn{color:var(--warn)}.bad{color:var(--bad)}.ok{color:var(--ok)}
+  input[type=text],input[type=number]{padding:4px 6px;border:1px solid var(--line);border-radius:4px;width:110px}
+  .banner{background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header>
+  <b>Licita-Bot</b>
+  <a href="/">Oportunidades</a>
+  <a href="/onboarding">Onboarding</a>
+  <a href="/?status=AGUARDANDO_APROVACAO">Aguardando aprovação</a>
+  <a href="/?status=BLOQUEADA">Bloqueadas</a>
+  <a href="/?status=ZONA_CINZENTA">Zona cinzenta</a>
+</header>
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

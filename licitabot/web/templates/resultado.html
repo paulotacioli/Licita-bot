@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Resultado{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;margin:40px auto;text-align:center">
+  <h2 class="{% if ok %}ok{% else %}bad{% endif %}">{{ msg }}</h2>
+  <p class="muted">Você pode fechar esta página.</p>
+</div>
+{% endblock %}

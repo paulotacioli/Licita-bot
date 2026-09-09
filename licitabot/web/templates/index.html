@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+{% if dry_run %}<div class="banner">DRY_RUN ativo: propostas nunca são enviadas de verdade. Desligue no .env quando estiver pronto.</div>{% endif %}
+<div class="card">
+  <b>Contagem por status:</b>
+  {% for st, n in contagem.items()|sort %}<a class="pill s-{{ st }}" href="/?status={{ st }}" style="margin:2px">{{ st }} {{ n }}</a>{% endfor %}
+</div>
+<div class="card">
+  <h2 style="margin-top:0">{{ status or "Oportunidades ativas" }} ({{ ops|length }})</h2>
+  <table>
+    <tr><th>ID</th><th>Status</th><th>Prazo</th><th>UF</th><th>Órgão</th><th>Portal</th><th>Valor est.</th><th>Objeto</th></tr>
+    {% for o in ops %}
+    <tr>
+      <td><a href="/oportunidades/{{ o.id }}">{{ o.id }}</a></td>
+      <td><span class="pill s-{{ o.status }}">{{ o.status }}</span></td>
+      <td>{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
+      <td>{{ o.uf }}</td>
+      <td>{{ o.orgao_nome[:45] }}</td>
+      <td>{{ o.portal }}</td>
+      <td>{{ "{:,.0f}".format(o.valor_estimado) if o.valor_estimado else "-" }}</td>
+      <td>{{ o.objeto[:140] }}<div class="muted">{{ o.status_motivo[:120] }}</div></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

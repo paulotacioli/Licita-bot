@@ -1,0 +1,95 @@
+# Seletores do Compras.gov.br (área do fornecedor). Editável sem mexer no código.
+# Cada chave tem `primary` e `fallbacks`. Sintaxe:
+#   role=button;name=Enviar proposta      -> page.get_by_role("button", name=re)
+#   label=Valor unitário                  -> page.get_by_label(re)
+#   text=Minhas propostas                 -> page.get_by_text(re)
+#   placeholder=Buscar                    -> page.get_by_placeholder(re)
+#   css=input[name='valor']               -> page.locator(css)
+# Os valores são expressões regulares, case-insensitive.
+#
+# ATENÇÃO: estes seletores são um ponto de partida e SERÃO ajustados na Fase 6
+# (mapeamento da interface com o navegador logado). Rode `licitabot portal smoke` para validar.
+
+urls:
+  home_fornecedor: "https://www.gov.br/compras/pt-br"
+  login_fornecedor: "https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/seguro/governo?"
+  area_trabalho: "https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/seguro/fornecedor"
+  sso_prefix: "https://sso.acesso.gov.br"
+  treinamento: "https://treinamento.comprasnet.gov.br"
+
+session:
+  logged_in_marker:
+    primary: "text=Área de Trabalho"
+    fallbacks: ["text=Sair", "role=button;name=Sair", "text=Fornecedor"]
+  login_redirect_marker:
+    primary: "text=Entrar com gov.br"
+    fallbacks: ["text=Identifique-se no gov.br", "css=form[action*='acesso.gov.br']"]
+
+navegacao:
+  menu_propostas:
+    primary: "role=link;name=Propostas"
+    fallbacks: ["text=Minhas propostas", "text=Cadastrar proposta"]
+  busca_pregao_input:
+    primary: "placeholder=Pesquisar"
+    fallbacks: ["label=Número da compra", "label=Pesquisar", "css=input[type='search']"]
+  abrir_compra:
+    primary: "role=button;name=Participar"
+    fallbacks: ["role=link;name=Participar", "text=Cadastrar proposta"]
+
+proposta:
+  declaracoes_checkbox:
+    primary: "role=checkbox"
+    fallbacks: ["css=input[type='checkbox']"]
+  item_linha:
+    primary: "role=row"
+    fallbacks: ["css=tr"]
+  valor_unitario:
+    primary: "label=Valor unitário"
+    fallbacks: ["label=Valor Unit", "placeholder=Valor unitário", "css=input[formcontrolname*='valorUnitario']"]
+  quantidade_ofertada:
+    primary: "label=Quantidade ofertada"
+    fallbacks: ["label=Quantidade", "css=input[formcontrolname*='quantidade']"]
+  marca:
+    primary: "label=Marca"
+    fallbacks: ["css=input[formcontrolname*='marca']"]
+  fabricante:
+    primary: "label=Fabricante"
+    fallbacks: ["css=input[formcontrolname*='fabricante']"]
+  modelo:
+    primary: "label=Modelo"
+    fallbacks: ["label=Modelo / Versão", "css=input[formcontrolname*='modelo']"]
+  descricao_detalhada:
+    primary: "label=Descrição detalhada"
+    fallbacks: ["label=Descrição", "css=textarea"]
+  salvar_item:
+    primary: "role=button;name=Salvar"
+    fallbacks: ["role=button;name=Confirmar", "role=button;name=Gravar"]
+  anexos_input:
+    primary: "css=input[type='file']"
+    fallbacks: []
+  anexos_botao:
+    primary: "role=button;name=Anexar"
+    fallbacks: ["role=button;name=Adicionar anexo", "text=Anexos"]
+  anexos_lista:
+    primary: "role=table"
+    fallbacks: ["css=.lista-anexos"]
+
+envio:
+  # ÚNICO seletor que efetiva a proposta. Só é usado por portal/comprasgov/envio.py após aprovação.
+  botao_enviar_proposta:
+    primary: "role=button;name=Enviar proposta"
+    fallbacks: ["role=button;name=Confirmar envio", "role=button;name=Enviar"]
+  confirmar_dialogo:
+    primary: "role=button;name=Sim"
+    fallbacks: ["role=button;name=Confirmar", "role=button;name=OK"]
+  recibo_marker:
+    primary: "text=Proposta enviada"
+    fallbacks: ["text=enviada com sucesso", "text=Proposta registrada"]
+
+monitor:
+  situacao_item:
+    primary: "role=table"
+    fallbacks: ["css=table"]
+  chat_mensagens:
+    primary: "text=Mensagens"
+    fallbacks: ["role=link;name=Chat", "css=.chat"]

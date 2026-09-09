@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}#{{ op.id }} {{ op.orgao_nome }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin:0 0 4px">#{{ op.id }} · {{ op.orgao_nome }} <span class="muted">({{ op.esfera }} · {{ op.uf }} · {{ op.municipio }})</span></h2>
+  <div class="muted">{{ op.numero_controle_pncp }} · {{ op.modalidade_nome }} · {{ op.modo_disputa or "" }}{% if op.srp %} · SRP{% endif %}{% if op.uasg %} · UASG {{ op.uasg }}{% endif %}</div>
+  <p><span class="pill s-{{ op.status }}">{{ op.status }}</span> {{ op.status_motivo }}</p>
+  {% if op.erro_ultimo %}<p class="bad">Último erro: {{ op.erro_ultimo[:400] }}</p>{% endif %}
+  <p><b>Prazo:</b> {{ op.data_encerramento_proposta }} · <b>Sessão:</b> {{ op.data_sessao or "-" }} · <b>Portal:</b> {{ op.portal }}
+    {% if op.link_sistema_origem %}· <a href="{{ op.link_sistema_origem }}" target="_blank">abrir no portal</a>{% endif %}
+    · <a href="https://pncp.gov.br/app/editais/{{ op.orgao_cnpj }}/{{ op.ano }}/{{ op.sequencial }}" target="_blank">PNCP</a></p>
+  <p><b>Objeto:</b> {{ op.objeto }}</p>
+  <p class="muted">Pasta: {{ op.pasta }}</p>
+  <form method="post" action="/oportunidades/{{ op.id }}/acao" style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if op.status == "AGUARDANDO_APROVACAO" %}
+      <button class="btn ok" name="acao" value="aprovar" onclick="return confirm('Aprovar e ENVIAR a proposta? Ela é vinculante.')">Aprovar e enviar</button>
+      <button class="btn bad" name="acao" value="rejeitar">Rejeitar</button>
+    {% endif %}
+    {% if op.status in ("ERRO","BLOQUEADA") %}<button class="btn" name="acao" value="retomar">Retomar</button>{% endif %}
+    {% if op.status == "ZONA_CINZENTA" %}<button class="btn ok" name="acao" value="promover">Promover (relevante)</button>{% endif %}
+    {% if op.status not in ("DESCARTADA","ENVIADA","ENCERRADA") %}<button class="btn" name="acao" value="descartar" onclick="return confirm('Descartar?')">Descartar</button>{% endif %}
+  </form>
+</div>
+
+{% if tri %}
+<div class="card"><b>Triagem:</b> score {{ tri.score }} · {{ tri.categoria }} · {{ tri.justificativa }}</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0">Itens e preços</h3>
+  <form method="post" action="/oportunidades/{{ op.id }}/precos-salvar">
+  <table>
+    <tr><th>Nº</th><th>Descrição</th><th>Qtd</th><th>Est. unit.</th><th>Proposto unit.</th><th>Total</th><th>Participa</th><th>Memória de cálculo</th></tr>
+    {% for i in itens %}
+    <tr>
+      <td>{{ i.numero_item }}</td>
+      <td>{{ i.descricao[:160] }}<div class="muted">{{ i.tipo_precificacao }} · {{ i.tipo_beneficio }}{% if i.horas_estimadas %} · {{ i.horas_estimadas }} h sugeridas{% endif %}</div></td>
+      <td>{{ "%g"|format(i.quantidade) }} {{ i.unidade }}</td>
+      <td>{{ "{:,.2f}".format(i.valor_unit_estimado or 0) }}</td>
+      <td><input type="text" name="unit_{{ i.numero_item }}" value="{{ '%.2f'|format(i.valor_unit_proposto or 0) }}"></td>
+      <td>{{ "{:,.2f}".format(i.valor_total_proposto or 0) }}</td>
+      <td><input type="checkbox" name="part_{{ i.numero_item }}" {% if i.participar %}checked{% endif %}></td>
+      <td class="muted">{{ i.justificativa_preco[:160] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p><button class="btn">Salvar preços (volta para PRECIFICADA e regera documentos)</button></p>
+  </form>
+</div>
+
+{% if req %}
+<div class="card">
+  <h3 style="margin-top:0">Análise do edital <span class="muted">(confiança {{ req.confianca }})</span></h3>
+  <p>Critério: <b>{{ req.criterio_julgamento }}</b> por <b>{{ req.julgamento_por }}</b> · ME/EPP: {{ req.beneficio_me_epp }} · SICAF: {{ req.exige_sicaf }} · Visita: {{ req.exige_visita_tecnica }} · Amostra/POC: {{ req.exige_amostra_ou_poc }}</p>
+  <p>Prazos: encerramento {{ req.prazos.encerramento_propostas }} · sessão {{ req.prazos.sessao_publica }} · validade mínima {{ req.prazos.validade_minima_proposta_dias }} dias · execução {{ req.prazos.prazo_execucao }}</p>
+  {% if req.alertas %}<p class="warn"><b>Alertas:</b></p><ul>{% for a in req.alertas %}<li class="warn">{{ a }}</li>{% endfor %}</ul>{% endif %}
+  <table>
+    <tr><th>Fase</th><th>Documento</th><th>Exigência</th><th>Ref.</th></tr>
+    {% for d in req.documentos_exigidos %}<tr><td>{{ d.fase }}</td><td>{{ d.tipo }}{% if not d.obrigatorio %} <span class="muted">(opcional)</span>{% endif %}</td><td>{{ d.descricao_literal }}</td><td class="muted">{{ d.referencia }}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if docs %}
+<div class="card">
+  <h3 style="margin-top:0">Documentos</h3>
+  <table>
+    <tr><th>#</th><th>Tipo</th><th>Título</th><th>Origem</th><th>Status</th><th>Arquivo</th><th>Obs.</th></tr>
+    {% for d in docs %}<tr><td>{{ d.ordem }}</td><td>{{ d.tipo }}</td><td>{{ d.titulo }}</td><td>{{ d.origem }}</td>
+      <td class="{% if d.status in ('FALTANDO','VENCIDO') %}bad{% elif d.status=='PRECISA_ASSINATURA' %}warn{% else %}ok{% endif %}">{{ d.status }}</td>
+      <td class="muted">{{ d.caminho_pdf or d.caminho_docx }}</td><td class="muted">{{ d.observacao }}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aps %}
+<div class="card"><h3 style="margin-top:0">Aprovações</h3>
+<table><tr><th>#</th><th>Criada</th><th>Expira</th><th>Decisão</th><th>Quando</th><th>Canal</th></tr>
+{% for a in aps %}<tr><td>{{ a.id }}</td><td>{{ a.criado_em }}</td><td>{{ a.expira_em }}</td><td>{{ a.decisao }}</td><td>{{ a.decidido_em or "-" }}</td><td>{{ a.canal }}</td></tr>{% endfor %}</table></div>
+{% endif %}
+
+<div class="card"><h3 style="margin-top:0">Eventos</h3>
+<table>{% for e in evs %}<tr><td class="muted" style="white-space:nowrap">{{ e.criado_em.strftime("%d/%m %H:%M") }}</td><td>{{ e.tipo }}</td><td>{{ e.mensagem }}</td></tr>{% endfor %}</table></div>
+{% endblock %}
