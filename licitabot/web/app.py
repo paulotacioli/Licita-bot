@@ -245,6 +245,74 @@ def _gravar_cookie(request: Request, resposta: Response, usuario) -> None:
         max_age=auth.DURACAO_SESSAO_S, httponly=True, samesite="lax", secure=seguro, path="/")
 
 
+# ---------- criar conta com convite (pública) ----------
+
+
+@app.get("/criar-conta", response_class=HTMLResponse)
+def criar_conta_form(request: Request, convite: str = ""):
+    if not auth.existe_usuario():
+        return RedirectResponse(url="/primeiro-acesso", status_code=303)
+    return templates.TemplateResponse(request, "criar_conta.html", {"convite": convite})
+
+
+@app.post("/criar-conta", response_class=HTMLResponse)
+def criar_conta(request: Request, convite: str = Form(""), usuario: str = Form(...), senha: str = Form(...), senha2: str = Form(...)):
+    if not auth.existe_usuario():
+        return RedirectResponse(url="/primeiro-acesso", status_code=303)
+    ip = _ip(request)
+    if _rate_limited(ip, limite=8, janela=300, balde=_tentativas_login):
+        return templates.TemplateResponse(request, "criar_conta.html", {"erro": "Muitas tentativas. Espere alguns minutos.", "convite": ""}, status_code=429)
+    erro = auth.validar_convite(convite) or auth.validar_novo_usuario(usuario, senha, senha2)
+    if erro:
+        return templates.TemplateResponse(request, "criar_conta.html", {"erro": erro, "convite": convite, "usuario_preenchido": usuario}, status_code=400)
+    auth.criar_usuario(usuario, senha)
+    auth.consumir_convite(convite, usuario)
+    u = auth.autenticar(usuario, senha)
+    resposta = RedirectResponse(url="/", status_code=303)
+    _gravar_cookie(request, resposta, u)
+    log.info("conta criada por convite: %s (ip %s)", u.usuario, ip)
+    return resposta
+
+
+# ---------- usuários (painel) ----------
+
+
+def _pagina_usuarios(request: Request, **extra):
+    base_url = get_settings().public_base_url.rstrip("/") or f"{request.url.scheme}://{request.url.netloc}"
+    return templates.TemplateResponse(request, "usuarios.html", _ctx(
+        request, pagina="usuarios", usuarios=auth.listar_usuarios(), convites=auth.convites_abertos(),
+        base_url=base_url, eu=request.state.sessao["uid"], **extra))
+
+
+@app.get("/usuarios", response_class=HTMLResponse)
+def usuarios(request: Request):
+    return _pagina_usuarios(request)
+
+
+@app.post("/usuarios/criar", response_class=HTMLResponse)
+def usuarios_criar(request: Request, usuario: str = Form(...), senha: str = Form(...), senha2: str = Form(...)):
+    erro = auth.validar_novo_usuario(usuario, senha, senha2)
+    if erro:
+        return _pagina_usuarios(request, erros=[erro])
+    auth.criar_usuario(usuario, senha)
+    log.info("usuário criado no painel por %s: %s", request.state.sessao["u"], usuario)
+    return RedirectResponse(url=f"/usuarios?ok=Usu%C3%A1rio+{usuario.strip().lower()}+criado.", status_code=303)
+
+
+@app.post("/usuarios/convite", response_class=HTMLResponse)
+def usuarios_convite(request: Request):
+    codigo, expira = auth.gerar_convite(request.state.sessao["u"])
+    return _pagina_usuarios(request, convite_novo=codigo, convite_expira=expira)
+
+
+@app.post("/usuarios/{uid}/remover")
+def usuarios_remover(request: Request, uid: int):
+    erro = auth.remover_usuario(uid, request.state.sessao["uid"])
+    if erro:
+        return _pagina_usuarios(request, erros=[erro])
+    return RedirectResponse(url="/usuarios?ok=Usu%C3%A1rio+removido.", status_code=303)
+
+
 @app.get("/sair")
 def sair():
     resposta = RedirectResponse(url="/login", status_code=303)

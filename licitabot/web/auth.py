@@ -12,14 +12,14 @@ import hashlib
 import hmac
 import logging
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import Request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlmodel import select
 
 from licitabot.config import get_settings
-from licitabot.db.models import UsuarioPainel
+from licitabot.db.models import ConvitePainel, UsuarioPainel
 from licitabot.db.session import db_session
 
 log = logging.getLogger(__name__)
@@ -28,7 +28,8 @@ COOKIE = "licitabot_sessao"
 DURACAO_SESSAO_S = 7 * 24 * 3600
 ITERACOES = 240_000
 # Prefixos liberados sem login. Tudo o mais exige sessão.
-ROTAS_PUBLICAS = ("/aprovar/", "/rejeitar/", "/decidir", "/login", "/primeiro-acesso", "/healthz", "/favicon.ico")
+ROTAS_PUBLICAS = ("/aprovar/", "/rejeitar/", "/decidir", "/login", "/primeiro-acesso", "/criar-conta", "/healthz", "/favicon.ico")
+DURACAO_CONVITE_S = 48 * 3600
 
 
 # ---------- senha ----------
@@ -128,3 +129,97 @@ def ler_sessao(request: Request) -> dict | None:
 
 def rota_publica(caminho: str) -> bool:
     return any(caminho == p or caminho.startswith(p) for p in ROTAS_PUBLICAS)
+
+
+# ---------- usuários (gestão) ----------
+
+
+def listar_usuarios() -> list[UsuarioPainel]:
+    with db_session() as session:
+        us = session.exec(select(UsuarioPainel).order_by(UsuarioPainel.id)).all()
+        for u in us:
+            session.expunge(u)
+        return list(us)
+
+
+def usuario_existe(nome: str) -> bool:
+    with db_session() as session:
+        return session.exec(select(UsuarioPainel).where(UsuarioPainel.usuario == nome.strip().lower())).first() is not None
+
+
+def validar_novo_usuario(nome: str, senha: str, senha2: str) -> str | None:
+    nome = nome.strip().lower()
+    if not nome or len(nome) < 3 or not nome.replace(".", "").replace("_", "").replace("-", "").isalnum():
+        return "Escolha um nome de usuário com pelo menos 3 caracteres, só letras, números, ponto, traço ou sublinhado."
+    if usuario_existe(nome):
+        return f"Já existe um usuário chamado '{nome}'."
+    if senha != senha2:
+        return "As duas senhas não são iguais."
+    return forca_da_senha(senha)
+
+
+def remover_usuario(usuario_id: int, solicitante_id: int) -> str | None:
+    if usuario_id == solicitante_id:
+        return "Você não pode remover a própria conta enquanto está logado nela."
+    with db_session() as session:
+        if len(session.exec(select(UsuarioPainel)).all()) <= 1:
+            return "Não dá para remover o único usuário do painel."
+        u = session.get(UsuarioPainel, usuario_id)
+        if not u:
+            return "Usuário não encontrado."
+        session.delete(u)
+        session.commit()
+        log.info("usuário do painel removido: %s", u.usuario)
+    return None
+
+
+# ---------- convites ----------
+
+
+def _hash_codigo(codigo: str) -> str:
+    return hashlib.sha256(codigo.strip().encode()).hexdigest()
+
+
+def gerar_convite(criado_por: str) -> tuple[str, datetime]:
+    """Cria um convite de uso único, válido por 48 h. Devolve o código em claro (mostrado uma vez) e a validade."""
+    codigo = secrets.token_urlsafe(24)
+    expira = datetime.now() + timedelta(seconds=DURACAO_CONVITE_S)
+    with db_session() as session:
+        session.add(ConvitePainel(codigo_hash=_hash_codigo(codigo), criado_por=criado_por, expira_em=expira))
+        session.commit()
+    return codigo, expira
+
+
+def validar_convite(codigo: str) -> str | None:
+    """Motivo de recusa, ou None se o convite está apto a ser usado."""
+    if not codigo or not codigo.strip():
+        return "Informe o código de convite."
+    with db_session() as session:
+        c = session.exec(select(ConvitePainel).where(ConvitePainel.codigo_hash == _hash_codigo(codigo))).first()
+        if not c:
+            return "Convite inválido."
+        if c.usado_em:
+            return "Este convite já foi usado."
+        if c.expira_em < datetime.now():
+            return "Este convite expirou. Peça um novo a quem administra o painel."
+    return None
+
+
+def consumir_convite(codigo: str, usuario: str) -> None:
+    with db_session() as session:
+        c = session.exec(select(ConvitePainel).where(ConvitePainel.codigo_hash == _hash_codigo(codigo))).first()
+        if c:
+            c.usado_em = datetime.now()
+            c.usado_por = usuario.strip().lower()
+            session.add(c)
+            session.commit()
+
+
+def convites_abertos() -> list[ConvitePainel]:
+    with db_session() as session:
+        cs = session.exec(
+            select(ConvitePainel).where(ConvitePainel.usado_em == None).order_by(ConvitePainel.id.desc())  # noqa: E711
+        ).all()
+        for c in cs:
+            session.expunge(c)
+        return list(cs)

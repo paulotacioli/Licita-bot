@@ -261,3 +261,17 @@ class UsuarioPainel(SQLModel, table=True):
     senha_hash: str = ""
     criado_em: datetime = Field(default_factory=utcnow)
     ultimo_acesso_em: Optional[datetime] = None
+
+
+class ConvitePainel(SQLModel, table=True):
+    """Convite para criar conta no painel. Guarda só o hash do código; o código em si vai para quem foi convidado."""
+
+    __tablename__ = "convite_painel"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    codigo_hash: str = Field(index=True, unique=True)
+    criado_por: str = ""
+    criado_em: datetime = Field(default_factory=utcnow)
+    expira_em: datetime
+    usado_em: Optional[datetime] = None
+    usado_por: str = ""

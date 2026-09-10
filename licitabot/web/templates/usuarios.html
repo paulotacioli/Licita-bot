@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% import "_icons.html" as i %}
+{% block title %}Usuários{% endblock %}
+
+{% block content %}
+{% if convite_novo %}
+<div class="card" style="border-color:var(--brand)">
+  <div class="card-head"><h2>Convite gerado</h2><span class="pill s-AGUARDANDO_APROVACAO">válido até {{ convite_expira|dt }}</span></div>
+  <div class="card-body">
+    <p>Mande para a pessoa o link abaixo. Ele abre a tela de criar conta já com o código preenchido, vale por 48 horas
+    e só pode ser usado uma vez. O código não fica guardado em texto, então copie agora.</p>
+    <input type="text" readonly class="mono" value="{{ base_url }}/criar-conta?convite={{ convite_novo }}" onclick="this.select()">
+    <div class="hint" style="margin-top:8px">Ou só o código: <span class="mono">{{ convite_novo }}</span></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Convidar alguém</h2></div>
+    <div class="card-body">
+      <p class="muted">A pessoa cria o próprio usuário e senha na tela de login, informando o código. Você não precisa saber a senha dela.</p>
+      <form method="post" action="/usuarios/convite">
+        <button class="btn primary" type="submit">{{ i.ico('inbox', 15) }} Gerar convite</button>
+      </form>
+      {% if convites %}
+      <div class="hint" style="margin-top:14px">Convites em aberto: {{ convites|length }}
+        ({% for c in convites %}{{ c.criado_por }}, expira {{ c.expira_em|dt }}{{ '; ' if not loop.last }}{% endfor %})</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Criar usuário agora</h2></div>
+    <div class="card-body">
+      <form method="post" action="/usuarios/criar" autocomplete="off">
+        <div class="field">
+          <label class="lbl" for="usuario">Usuário</label>
+          <input type="text" id="usuario" name="usuario" autocapitalize="none" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label class="lbl" for="senha">Senha inicial</label>
+          <div class="hint">Pelo menos 10 caracteres, letras e números. A pessoa troca depois em Minha conta.</div>
+          <input type="password" id="senha" name="senha" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label class="lbl" for="senha2">Repita a senha</label>
+          <input type="password" id="senha2" name="senha2" autocomplete="new-password" required>
+        </div>
+        <button class="btn" type="submit">Criar usuário</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Quem tem acesso</h2></div>
+  <div class="card-body tight">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Usuário</th><th>Criado em</th><th>Último acesso</th><th></th></tr></thead>
+        <tbody>
+        {% for u in usuarios %}
+          <tr>
+            <td><b>{{ u.usuario }}</b>{% if u.id == eu %} <span class="pill">você</span>{% endif %}</td>
+            <td class="mono" style="font-size:12px">{{ u.criado_em|dt }}</td>
+            <td class="mono" style="font-size:12px">{{ u.ultimo_acesso_em|dt }}</td>
+            <td class="right">
+              {% if u.id != eu %}
+              <form method="post" action="/usuarios/{{ u.id }}/remover" onsubmit="return confirm('Remover o acesso de {{ u.usuario }}?')">
+                <button class="btn sm ghost" type="submit">Remover</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

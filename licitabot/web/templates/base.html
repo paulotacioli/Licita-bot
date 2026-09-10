@@ -51,6 +51,7 @@
         {{ i.ico('checklist') }} Onboarding
         {% if nav_contagem.pendencias %}<span class="count">{{ nav_contagem.pendencias }}</span>{% endif %}
       </a>
+      <a href="/usuarios" class="{{ 'on' if pagina == 'usuarios' }}">{{ i.ico('inbox') }} Usuários</a>
       <a href="/conta" class="{{ 'on' if pagina == 'conta' }}">{{ i.ico('cadeado') }} Minha conta</a>
     </nav>
 

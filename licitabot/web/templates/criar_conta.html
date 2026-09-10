@@ -1,0 +1,57 @@
+{% import "_icons.html" as i %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Criar conta · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="plain">
+  <main class="panel">
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('cadeado', 22) }}</span>
+      <h1>Criar conta</h1>
+      <p>Você precisa de um código de convite, gerado por quem já usa o painel.</p>
+    </div>
+
+    <div class="panel-body">
+      {% if erro %}
+      <div class="alert alert-bad">{{ i.ico('alerta') }}<div>{{ erro }}</div></div>
+      {% endif %}
+
+      <form method="post" action="/criar-conta" autocomplete="off">
+        <div class="field">
+          <label class="lbl" for="convite">Código de convite</label>
+          <input type="text" id="convite" name="convite" value="{{ convite or '' }}" class="mono"
+                 autocapitalize="none" spellcheck="false" required {{ 'autofocus' if not convite }}>
+        </div>
+        <div class="field">
+          <label class="lbl" for="usuario">Usuário</label>
+          <input type="text" id="usuario" name="usuario" value="{{ usuario_preenchido or '' }}"
+                 autocapitalize="none" spellcheck="false" required {{ 'autofocus' if convite }}>
+        </div>
+        <div class="field">
+          <label class="lbl" for="senha">Senha</label>
+          <div class="hint">Pelo menos 10 caracteres, misturando letras e números.</div>
+          <input type="password" id="senha" name="senha" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label class="lbl" for="senha2">Repita a senha</label>
+          <input type="password" id="senha2" name="senha2" autocomplete="new-password" required>
+        </div>
+        <button class="btn primary block" type="submit">Criar conta e entrar</button>
+      </form>
+    </div>
+
+    <div class="panel-foot">
+      Já tem conta? <a href="/login">Entrar</a>
+    </div>
+  </main>
+</body>
+</html>
