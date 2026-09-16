@@ -34,6 +34,13 @@ def _env() -> Environment:
     return Environment(loader=FileSystemLoader(str(s.templates_path / "email")), autoescape=select_autoescape(["html", "j2"]))
 
 
+def _dashboard(caminho: str = "/") -> str:
+    """Link do painel para os e-mails: PUBLIC_BASE_URL quando configurada, senão o host local."""
+    s = get_settings()
+    base = s.public_base_url.rstrip("/") or f"http://{s.web_host}:{s.web_port}"
+    return base + caminho
+
+
 def _fmt_brl(v: float | None) -> str:
     if v is None:
         return "-"
@@ -155,7 +162,7 @@ def send_approval_email(oportunidade_id: int) -> None:
             expira=ap.expira_em.strftime("%d/%m/%Y %H:%M"),
             link_aprovar=f"{base}/aprovar/{tok_aprovar}" if base else "",
             link_rejeitar=f"{base}/rejeitar/{tok_rejeitar}" if base else "",
-            dashboard=f"http://{s.web_host}:{s.web_port}/oportunidades/{op.id}",
+            dashboard=_dashboard(f"/oportunidades/{op.id}"),
             shots=list(range(len(shots))),
             fmt=_fmt_brl,
             dry_run=s.dry_run,
@@ -189,7 +196,7 @@ def send_info_email(oportunidade_id: int, motivo_portal: str) -> None:
             horas_restantes=f"{horas:.0f} h" if horas is not None else "?",
             prazo=prazo.strftime("%d/%m/%Y %H:%M") if prazo else "?",
             expira="", link_aprovar="", link_rejeitar="",
-            dashboard=f"http://{s.web_host}:{s.web_port}/oportunidades/{op.id}",
+            dashboard=_dashboard(f"/oportunidades/{op.id}"),
             shots=[], fmt=_fmt_brl, dry_run=s.dry_run,
             informativo=True, motivo_portal=motivo_portal,
             link_pncp=f"https://pncp.gov.br/app/editais/{op.orgao_cnpj}/{op.ano}/{op.sequencial}",
@@ -201,6 +208,50 @@ def send_info_email(oportunidade_id: int, motivo_portal: str) -> None:
         session.commit()
 
 
+def ja_enviado(session, op: Oportunidade, canal: str) -> bool:
+    from licitabot.db.models import Evento
+
+    evs = session.exec(select(Evento).where(Evento.tipo == "email_oportunidade", Evento.oportunidade_id == op.id)).all()
+    return any(e.dados_json.get("canal") == canal for e in evs)
+
+
+def send_match_email(oportunidade_id: int, forcar: bool = False) -> bool:
+    """E-mail "licitação compatível": valor, prazos e checklist de premissas, logo depois da análise do edital.
+
+    Sai antes da precificação de propósito: o dono decide cedo se vale correr atrás de certidão, balanço ou
+    atestado. Conta no limite diário e é enviado uma vez por licitação. Devolve True se enviou."""
+    from licitabot.pipeline import premissas
+
+    if not destinatarios():
+        log.info("%s: sem destinatários configurados; e-mail de compatível não enviado", oportunidade_id)
+        return False
+    with db_session() as session:
+        op = session.get(Oportunidade, oportunidade_id)
+        if not forcar and ja_enviado(session, op, "compativel"):
+            return False
+        if not forcar and limite_diario_atingido(session):
+            log.info("%s: limite diário atingido; e-mail de compatível fica para depois", op.id)
+            return False
+        req = get_requisitos(session, op)
+        ck = premissas.para_dict(premissas.montar(session, op, req))
+        html = _env().get_template("compativel.html.j2").render(
+            op=op, req=req, ck=ck, fmt=_fmt_brl,
+            dashboard=_dashboard(f"/oportunidades/{op.id}"),
+            link_pncp=f"https://pncp.gov.br/app/editais/{op.orgao_cnpj}/{op.ano}/{op.sequencial}",
+        )
+        prazo = op.data_encerramento_proposta
+        pend = ck["resumo"]["pendente"] + ck["resumo"]["atencao"]
+        assunto = f"[LICITABOT#{op.id}] Compatível: {op.orgao_nome[:40]} — {_fmt_brl(op.valor_estimado) if op.valor_estimado else 'valor não informado'}"
+        if prazo:
+            assunto += f" — prazo {prazo:%d/%m %H:%M}"
+        if pend:
+            assunto += f" — {pend} pendência(s)"
+        msg_id = enviar_email(assunto, html)
+        _registrar_envio(session, op, "compativel", msg_id)
+        session.commit()
+        return True
+
+
 def send_daily_digest() -> None:
     """Resumo diário: novas licitações compatíveis (últimas 24h), e-mails enviados, fila, bloqueios e onboarding."""
     from licitabot.db.models import Evento
@@ -209,8 +260,14 @@ def send_daily_digest() -> None:
     agora = datetime.now()
     with db_session() as session:
         desde = utcnow() - timedelta(hours=24)
+        from sqlalchemy import or_
+
         novas = session.exec(
-            select(Oportunidade).where(Oportunidade.criado_em >= desde, Oportunidade.status != Status.DESCARTADA).order_by(Oportunidade.data_encerramento_proposta)
+            select(Oportunidade).where(
+                Oportunidade.criado_em >= desde,
+                Oportunidade.status.not_in([Status.DESCARTADA, Status.EXPIRADA]),
+                or_(Oportunidade.pre_triagem == "relevante", Oportunidade.status.in_([Status.TRIADA_RELEVANTE, Status.ANALISADA, Status.PRECIFICADA, Status.DOCS_GERADOS, Status.PREPARADA_PORTAL, Status.AGUARDANDO_APROVACAO])),
+            ).order_by(Oportunidade.data_encerramento_proposta)
         ).all()
         relevantes = session.exec(
             select(Oportunidade).where(Oportunidade.status.in_([Status.TRIADA_RELEVANTE, Status.ANALISADA, Status.PRECIFICADA, Status.DOCS_GERADOS, Status.PREPARADA_PORTAL, Status.AGUARDANDO_APROVACAO])).order_by(Oportunidade.data_encerramento_proposta)
@@ -223,10 +280,22 @@ def send_daily_digest() -> None:
         from licitabot.sicaf.checklist import onboarding_completo
 
         ok_onb, faltando = onboarding_completo()
+        # Para cada compatível: quantas premissas faltam e quando vence — o resumo vira uma lista de ação
+        from licitabot.pipeline import premissas
+
+        premissas_por_op: dict[int, dict] = {}
+        for o in list(novas) + list(relevantes):
+            if o.id in premissas_por_op:
+                continue
+            try:
+                ck = premissas.montar(session, o, get_requisitos(session, o))
+                premissas_por_op[o.id] = {"pendentes": [i.titulo for i in ck.pendentes][:4], "n": len(ck.pendentes), "completo": ck.completo}
+            except Exception as e:  # noqa: BLE001
+                log.debug("premissas de %s no resumo: %s", o.id, e)
         html = _env().get_template("resumo_diario.html.j2").render(
-            data=agora.strftime("%d/%m/%Y"), novas=novas, relevantes=relevantes, fila=len(fila), erros=len(erros),
+            data=agora.strftime("%d/%m/%Y"), novas=novas, relevantes=relevantes, fila=len(fila), erros=len(erros), premissas=premissas_por_op,
             enviados_ontem=enviados_ontem, limite=limite_diario(), ok_onb=ok_onb, faltando=faltando,
-            fmt=_fmt_brl, dashboard=f"http://{s.web_host}:{s.web_port}/",
+            fmt=_fmt_brl, dashboard=_dashboard("/"),
             pncp=lambda o: f"https://pncp.gov.br/app/editais/{o.orgao_cnpj}/{o.ano}/{o.sequencial}",
         )
         enviar_email(f"[LICITABOT] Resumo diário {agora:%d/%m}: {len(novas)} novas, {len(relevantes)} em análise, fila {len(fila)}", html)

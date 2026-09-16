@@ -170,3 +170,29 @@ def test_destinatarios_usam_o_yaml_e_caem_para_o_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(s, "owner_email", "")
     assert c.destinatarios(s) == []
+
+
+# ---------- filtros da lista ----------
+
+
+def test_num_aceita_formatos_brasileiros():
+    from licitabot.web.app import _num
+
+    assert _num("200000") == 200000
+    assert _num("200.000") == 200000
+    assert _num("200.000,50") == 200000.5
+    assert _num("R$ 200 mil") == 200000
+    assert _num("1,5 mi") == 1_500_000
+    assert _num("abc") is None and _num("") is None
+
+
+def test_filtros_link_troca_um_campo_e_omite_vazios():
+    from starlette.requests import Request
+
+    from licitabot.web.app import Filtros
+
+    scope = {"type": "http", "method": "GET", "path": "/", "headers": [], "query_string": b"q=nota&uf=sp&vmax=200000&status=DESCARTADA"}
+    f = Filtros(Request(scope))
+    assert f.uf == "SP" and f.vmax == 200000 and f.ativos
+    link = f.link(prazo=7, vmax="")
+    assert "prazo=7" in link and "vmax" not in link and "q=nota" in link and "status=DESCARTADA" in link

@@ -4,18 +4,23 @@
 
 {% block acoes %}
 <div class="btn-row">
-  <a class="btn sm {{ '' if status else 'primary' }}" href="/">Ativas</a>
+  <a class="btn sm {{ 'primary' if not status and vista != 'compativeis' }}" href="/">Ativas</a>
+  <a class="btn sm {{ 'primary' if vista == 'compativeis' }}" href="/?vista=compativeis">Compatíveis</a>
   <a class="btn sm {{ 'primary' if status == 'DESCARTADA' }}" href="/?status=DESCARTADA">Descartadas</a>
   <a class="btn sm {{ 'primary' if status == 'ERRO' }}" href="/?status=ERRO">Com erro</a>
 </div>
 {% endblock %}
 
 {% block content %}
-{% if not status %}
+{% if not status and vista != 'compativeis' %}
 <div class="stats">
   <a class="stat" href="/">
     <span class="stat-n">{{ nav_contagem.ativas }}</span>
     <span class="stat-l">Em acompanhamento</span>
+  </a>
+  <a class="stat good" href="/?vista=compativeis">
+    <span class="stat-n">{{ nav_contagem.compativeis }}</span>
+    <span class="stat-l">Compatíveis com o perfil</span>
   </a>
   <a class="stat accent" href="/?status=AGUARDANDO_APROVACAO">
     <span class="stat-n">{{ nav_contagem.aprovacao }}</span>
@@ -29,12 +34,54 @@
     <span class="stat-n">{{ nav_contagem.bloqueadas }}</span>
     <span class="stat-l">Bloqueadas</span>
   </a>
-  <div class="stat">
-    <span class="stat-n">{{ contagem.get('DESCOBERTA', 0) }}</span>
-    <span class="stat-l">Na fila de análise</span>
-  </div>
 </div>
 {% endif %}
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Filtrar</h2>
+      <div class="card-note">Texto livre procura no objeto, no órgão e no município. Os filtros somam entre si.</div>
+    </div>
+    {% if f.ativos %}<a class="btn sm ghost" href="{{ '/?vista=compativeis' if vista == 'compativeis' else ('/?status=' ~ status if status else '/') }}">Limpar filtros</a>{% endif %}
+  </div>
+  <form method="get" action="/" class="card-body">
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    {% if vista %}<input type="hidden" name="vista" value="{{ vista }}">{% endif %}
+    <div class="quick">
+      {% for dias, rot in [(3, 'vence em 3 dias'), (7, 'vence em 7 dias'), (15, 'vence em 15 dias'), (30, 'vence em 30 dias')] %}
+      <a class="{{ 'on' if f.prazo == dias }}" href="{{ f.link(prazo=dias if f.prazo != dias else '') }}">{{ rot }}</a>
+      {% endfor %}
+      <a class="{{ 'on' if f.pre == 'relevante' }}" href="{{ f.link(pre='relevante' if f.pre != 'relevante' else '') }}">IA: relevante</a>
+      <a class="{{ 'on' if f.pre == 'incerto' }}" href="{{ f.link(pre='incerto' if f.pre != 'incerto' else '') }}">IA: incerto</a>
+      <a class="{{ 'on' if f.vmax == 200000 }}" href="{{ f.link(vmax=200000 if f.vmax != 200000 else '') }}">até R$ 200 mil</a>
+      <a class="{{ 'on' if f.vmin == 200000 }}" href="{{ f.link(vmin=200000 if f.vmin != 200000 else '') }}">acima de R$ 200 mil</a>
+    </div>
+    <div class="filters">
+      <div class="f wide"><label for="q">Busca</label><input type="text" id="q" name="q" value="{{ f.q }}" placeholder="ex.: nota fiscal, SAP, digitalização"></div>
+      <div class="f"><label for="uf">UF</label>
+        <select id="uf" name="uf"><option value="">Todas</option>{% for u in ufs %}<option value="{{ u }}" {{ 'selected' if f.uf == u }}>{{ u }}</option>{% endfor %}</select></div>
+      <div class="f"><label for="mod">Modalidade</label>
+        <select id="mod" name="mod"><option value="">Todas</option>{% for m in modalidades %}<option value="{{ m }}" {{ 'selected' if f.mod == m }}>{{ m }}</option>{% endfor %}</select></div>
+      <div class="f"><label for="vmin">Valor mínimo (R$)</label><input type="text" inputmode="numeric" id="vmin" name="vmin" value="{{ f.vmin or '' }}" placeholder="0"></div>
+      <div class="f"><label for="vmax">Valor máximo (R$)</label><input type="text" inputmode="numeric" id="vmax" name="vmax" value="{{ f.vmax or '' }}" placeholder="sem teto"></div>
+      <div class="f"><label for="prazo">Vence em até (dias)</label><input type="text" inputmode="numeric" id="prazo" name="prazo" value="{{ f.prazo or '' }}" placeholder="qualquer"></div>
+      <div class="f"><label for="pre">Pré-triagem IA</label>
+        <select id="pre" name="pre"><option value="">Qualquer</option>
+          <option value="relevante" {{ 'selected' if f.pre == 'relevante' }}>relevante</option>
+          <option value="incerto" {{ 'selected' if f.pre == 'incerto' }}>incerto</option>
+          <option value="irrelevante" {{ 'selected' if f.pre == 'irrelevante' }}>irrelevante</option>
+          <option value="nenhuma" {{ 'selected' if f.pre == 'nenhuma' }}>ainda sem pré-triagem</option></select></div>
+      <div class="f"><label for="ordem">Ordenar por</label>
+        <select id="ordem" name="ordem">
+          <option value="prazo" {{ 'selected' if f.ordem == 'prazo' }}>prazo mais próximo</option>
+          <option value="valor" {{ 'selected' if f.ordem == 'valor' }}>maior valor</option>
+          <option value="valor_asc" {{ 'selected' if f.ordem == 'valor_asc' }}>menor valor</option>
+          <option value="recente" {{ 'selected' if f.ordem == 'recente' }}>descobertas por último</option></select></div>
+      <div class="f f-actions"><button class="btn primary" type="submit">{{ i.ico('funil', 14) }} Aplicar</button></div>
+    </div>
+  </form>
+</div>
 
 <div class="card">
   <div class="card-head">
@@ -42,7 +89,8 @@
       <h2>{{ titulo_pagina }}</h2>
       <div class="card-note">
         {{ ops|length }} {{ 'licitação' if ops|length == 1 else 'licitações' }}{% if ops|length >= limite %},
-        mostrando as {{ limite }} de prazo mais próximo{% endif %}. Ordenadas pelo prazo que vence primeiro.
+        mostrando as {{ limite }} primeiras{% endif %}{% if f.ativos %} com os filtros aplicados{% endif %}.
+        {% if vista == 'compativeis' %}Aqui ficam as que a IA marcou como relevantes ou já passaram pela análise do edital.{% endif %}
       </div>
     </div>
   </div>
@@ -53,7 +101,7 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th><th>Situação</th><th>Prazo</th><th>UF</th>
+            <th>ID</th><th>Situação</th><th>IA</th><th>Prazo</th><th>UF</th>
             <th>Órgão</th><th class="num">Valor estimado</th><th>Objeto</th>
           </tr>
         </thead>
@@ -62,13 +110,16 @@
           <tr>
             <td class="id"><a href="/oportunidades/{{ o.id }}">{{ o.id }}</a></td>
             <td><span class="pill s-{{ o.status }}">{{ o.status|humano }}</span></td>
-            <td class="nowrap mono" style="font-size:12px">{{ o.data_encerramento_proposta|dt }}</td>
+            <td>{% if o.pre_triagem %}<span class="pill pre-{{ o.pre_triagem }}" title="{{ o.pre_triagem_motivo }}">{{ o.pre_triagem }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="nowrap mono" style="font-size:12px">{{ o.data_encerramento_proposta|dt }}
+              {% if o.data_encerramento_proposta %}<div class="muted" style="font-size:11px;font-family:var(--sans)">{{ o.data_encerramento_proposta|faltam }}</div>{% endif %}</td>
             <td class="nowrap">{{ o.uf or '—' }}</td>
-            <td>{{ o.orgao_nome|truncate(52, True) }}<div class="muted" style="font-size:11.5px">{{ o.municipio }}</div></td>
+            <td>{{ o.orgao_nome|truncate(52, True) }}<div class="muted" style="font-size:11.5px">{{ o.municipio }}{% if o.modalidade_nome %} · {{ o.modalidade_nome|replace(' - Eletrônico', '')|replace(' - Eletrônica', '') }}{% endif %}</div></td>
             <td class="num">{{ o.valor_estimado|brl_curto }}</td>
             <td class="obj">
               <div class="obj-t">{{ o.objeto }}</div>
-              {% if o.status_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.status_motivo|truncate(110, True) }}</div>{% endif %}
+              {% if o.pre_triagem_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.pre_triagem_motivo|truncate(110, True) }}</div>
+              {% elif o.status_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.status_motivo|truncate(110, True) }}</div>{% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -81,7 +132,9 @@
     {{ i.ico('inbox', 34) }}
     <h3>Nenhuma licitação aqui</h3>
     <p class="mb0">
-      {% if status %}Nenhuma licitação com esta situação no momento.
+      {% if f.ativos %}Nada bate com esses filtros. <a href="/">Limpar</a> e tentar de novo.
+      {% elif vista == 'compativeis' %}Nada compatível ainda. Ligue a <a href="/configuracoes/perfil">pré-triagem por IA</a> e rode a descoberta.
+      {% elif status %}Nenhuma licitação com esta situação no momento.
       {% else %}Rode a descoberta para buscar editais no PNCP, ou ajuste os
       <a href="/configuracoes/filtros">filtros de busca</a>.{% endif %}
     </p>

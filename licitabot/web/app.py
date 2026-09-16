@@ -25,6 +25,7 @@ from licitabot.approval.service import decidir_por_token, descricao_token
 from licitabot.config import get_settings, load_empresa
 from licitabot.db.models import Aprovacao, DocumentoGerado, Evento, Item, OnboardingPasso, Oportunidade, Triagem
 from licitabot.db.session import db_session, init_db
+from licitabot.pipeline import premissas
 from licitabot.pipeline.analysis import get_requisitos
 from licitabot.pipeline.states import Status
 from licitabot.web import auth
@@ -80,6 +81,18 @@ def _dt_longo(v) -> str:
     return v.strftime("%d/%m/%Y às %H:%M") if isinstance(v, datetime) else "—"
 
 
+def _faltam(v) -> str:
+    """Tempo até um prazo, curto, para a tabela: 'faltam 3 d', 'faltam 5 h', 'encerrado'."""
+    if not isinstance(v, datetime):
+        return ""
+    seg = (v - datetime.now()).total_seconds()
+    if seg <= 0:
+        return "encerrado"
+    if seg < 86400:
+        return f"faltam {int(seg // 3600)} h"
+    return f"faltam {int(seg // 86400)} d"
+
+
 def _humano(status: str) -> str:
     return str(status).replace("_", " ").capitalize()
 
@@ -89,6 +102,7 @@ templates.env.filters["brl_curto"] = _brl_curto
 templates.env.filters["dt"] = _dt
 templates.env.filters["dt_longo"] = _dt_longo
 templates.env.filters["humano"] = _humano
+templates.env.filters["faltam"] = _faltam
 
 
 @app.on_event("startup")
@@ -157,12 +171,14 @@ def _ctx(request: Request, **extra) -> dict:
         pendencias = session.exec(
             select(func.count()).select_from(OnboardingPasso).where(OnboardingPasso.concluido == False)  # noqa: E712
         ).one()
+        compativeis = session.exec(select(func.count()).select_from(Oportunidade).where(_compativel_clausula())).one()
     inativos = {Status.DESCARTADA, Status.EXPIRADA, Status.REJEITADA, Status.ENCERRADA}
     nav = {
         "ativas": sum(n for st, n in contagem.items() if st not in inativos),
         "aprovacao": contagem.get(Status.AGUARDANDO_APROVACAO, 0),
         "cinzenta": contagem.get(Status.ZONA_CINZENTA, 0),
         "bloqueadas": contagem.get(Status.BLOQUEADA, 0) + contagem.get(Status.ERRO, 0),
+        "compativeis": compativeis or 0,
         "pendencias": pendencias or 0,
     }
     sessao = getattr(request.state, "sessao", None) or {}
@@ -384,22 +400,130 @@ _PAGINAS = {
 }
 
 
+STATUS_COMPATIVEIS = [Status.TRIADA_RELEVANTE, Status.ANALISADA, Status.PRECIFICADA, Status.DOCS_GERADOS, Status.PREPARADA_PORTAL, Status.AGUARDANDO_APROVACAO, Status.APROVADA]
+
+
+def _compativel_clausula():
+    """Compatível = a IA marcou como relevante pelo objeto, ou já passou da triagem completa; nunca encerrada/descartada."""
+    from sqlalchemy import and_, or_
+
+    return and_(
+        or_(Oportunidade.pre_triagem == "relevante", Oportunidade.status.in_(STATUS_COMPATIVEIS)),
+        Oportunidade.status.not_in([Status.DESCARTADA, Status.EXPIRADA, Status.REJEITADA, Status.ENCERRADA]),
+    )
+
+
+def _num(v: str | None) -> float | None:
+    """Aceita '200000', '200.000', '200.000,50' e 'R$ 200 mil' (só o número)."""
+    if not v:
+        return None
+    t = str(v).strip().lower().replace("r$", "").replace(" ", "")
+    mult = 1.0
+    if t.endswith("mil"):
+        mult, t = 1_000.0, t[:-3]
+    elif t.endswith("mi"):
+        mult, t = 1_000_000.0, t[:-2]
+    if "," in t:
+        t = t.replace(".", "").replace(",", ".")
+    elif t.count(".") > 1 or (t.count(".") == 1 and len(t.split(".")[1]) == 3):
+        t = t.replace(".", "")
+    try:
+        return float(t) * mult
+    except ValueError:
+        return None
+
+
+class Filtros:
+    """Filtros da lista, lidos da query string. `link()` monta a URL com um campo trocado, para os atalhos."""
+
+    CAMPOS = ("q", "uf", "mod", "vmin", "vmax", "prazo", "pre", "ordem")
+
+    def __init__(self, request: Request):
+        qp = request.query_params
+        self.status = qp.get("status") or None
+        self.vista = qp.get("vista") or None
+        self.q = (qp.get("q") or "").strip()
+        self.uf = (qp.get("uf") or "").strip().upper()[:2]
+        self.mod = (qp.get("mod") or "").strip()
+        self.vmin = _num(qp.get("vmin"))
+        self.vmax = _num(qp.get("vmax"))
+        try:
+            self.prazo = int(qp.get("prazo") or 0) or None
+        except ValueError:
+            self.prazo = None
+        self.pre = (qp.get("pre") or "").strip()
+        self.ordem = qp.get("ordem") or "prazo"
+
+    @property
+    def ativos(self) -> bool:
+        return bool(self.q or self.uf or self.mod or self.vmin or self.vmax or self.prazo or self.pre)
+
+    def link(self, **troca) -> str:
+        from urllib.parse import urlencode
+
+        atual = {"status": self.status, "vista": self.vista, "q": self.q, "uf": self.uf, "mod": self.mod,
+                 "vmin": int(self.vmin) if self.vmin else "", "vmax": int(self.vmax) if self.vmax else "",
+                 "prazo": self.prazo or "", "pre": self.pre, "ordem": self.ordem if self.ordem != "prazo" else ""}
+        atual.update(troca)
+        return "/?" + urlencode({k: v for k, v in atual.items() if v not in (None, "")})
+
+    def aplicar(self, q):
+        from sqlalchemy import or_
+
+        if self.q:
+            like = f"%{self.q}%"
+            q = q.where(or_(Oportunidade.objeto.ilike(like), Oportunidade.orgao_nome.ilike(like), Oportunidade.municipio.ilike(like)))
+        if self.uf:
+            q = q.where(Oportunidade.uf == self.uf)
+        if self.mod:
+            q = q.where(Oportunidade.modalidade_nome == self.mod)
+        if self.vmin is not None:
+            q = q.where(Oportunidade.valor_estimado >= self.vmin)
+        if self.vmax is not None:
+            q = q.where(Oportunidade.valor_estimado <= self.vmax)
+        if self.prazo:
+            from datetime import timedelta
+
+            q = q.where(Oportunidade.data_encerramento_proposta <= datetime.now() + timedelta(days=self.prazo), Oportunidade.data_encerramento_proposta >= datetime.now())
+        if self.pre == "nenhuma":
+            q = q.where(Oportunidade.pre_triagem == "")
+        elif self.pre:
+            q = q.where(Oportunidade.pre_triagem == self.pre)
+        if self.ordem == "valor":
+            q = q.order_by(Oportunidade.valor_estimado.desc().nulls_last())
+        elif self.ordem == "valor_asc":
+            q = q.order_by(Oportunidade.valor_estimado.asc().nulls_last())
+        elif self.ordem == "recente":
+            q = q.order_by(Oportunidade.id.desc())
+        else:
+            q = q.order_by(Oportunidade.data_encerramento_proposta.asc().nulls_last())
+        return q
+
+
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, status: str | None = None):
+def index(request: Request):
+    f = Filtros(request)
+    status, vista = f.status, f.vista
     with db_session() as session:
-        q = select(Oportunidade).order_by(Oportunidade.data_encerramento_proposta)
-        if status:
+        q = select(Oportunidade)
+        if vista == "compativeis":
+            q = q.where(_compativel_clausula())
+        elif status:
             q = q.where(Oportunidade.status == status)
         else:
             q = q.where(Oportunidade.status.not_in([Status.DESCARTADA, Status.EXPIRADA]))
-        ops = session.exec(q.limit(LIMITE_ATIVAS)).all()
+        ops = session.exec(f.aplicar(q).limit(LIMITE_ATIVAS)).all()
+        ufs = sorted({u for u in session.exec(select(Oportunidade.uf).distinct()).all() if u})
+        modalidades = sorted({m for m in session.exec(select(Oportunidade.modalidade_nome).distinct()).all() if m})
+    if vista == "compativeis":
+        titulo, pagina = "Licitações compatíveis", "compativeis"
+    elif status:
+        titulo, pagina = _TITULOS.get(status, _humano(status)), _PAGINAS.get(status, "oportunidades")
+    else:
+        titulo, pagina = "Oportunidades ativas", "oportunidades"
     return templates.TemplateResponse(request, "index.html", _ctx(
-        request,
-        ops=ops,
-        status=status,
-        limite=LIMITE_ATIVAS,
-        titulo_pagina=_TITULOS.get(status, "Oportunidades ativas") if status else "Oportunidades ativas",
-        pagina=_PAGINAS.get(status, "oportunidades"),
+        request, ops=ops, status=status, vista=vista, f=f, ufs=ufs, modalidades=modalidades,
+        limite=LIMITE_ATIVAS, titulo_pagina=titulo, pagina=pagina,
     ))
 
 
@@ -415,8 +539,9 @@ def detalhe(request: Request, oid: int):
         req = get_requisitos(session, op)
         evs = session.exec(select(Evento).where(Evento.oportunidade_id == oid).order_by(Evento.id.desc()).limit(40)).all()
         aps = session.exec(select(Aprovacao).where(Aprovacao.oportunidade_id == oid).order_by(Aprovacao.id.desc())).all()
+        ck = premissas.para_dict(premissas.montar(session, op, req))
         return templates.TemplateResponse(request, "detalhe.html", _ctx(
-            request, op=op, itens=itens, docs=docs, tri=tri, req=req, evs=evs, aps=aps, pagina="oportunidades"))
+            request, op=op, itens=itens, docs=docs, tri=tri, req=req, evs=evs, aps=aps, ck=ck, pagina="oportunidades"))
 
 
 @app.post("/oportunidades/{oid}/acao")
@@ -443,6 +568,16 @@ def acao(oid: int, acao: str = Form(...)):
             if op.status == Status.ZONA_CINZENTA:
                 set_status(session, op, Status.TRIADA_RELEVANTE, "promovida manualmente no painel")
                 session.commit()
+    elif acao == "email_compativel":
+        from licitabot.pipeline.notify import send_match_email
+
+        try:
+            enviado = send_match_email(oid, forcar=True)
+        except Exception as e:  # noqa: BLE001
+            log.warning("e-mail de compatível (painel) falhou: %s", e)
+            return RedirectResponse(url=f"/oportunidades/{oid}?ok=Falha ao enviar: {str(e)[:120]}", status_code=303)
+        msg = "E-mail com o checklist enviado." if enviado else "Nenhum destinatário configurado em Notificações."
+        return RedirectResponse(url=f"/oportunidades/{oid}?ok={msg}", status_code=303)
     return RedirectResponse(url=f"/oportunidades/{oid}", status_code=303)
 
 

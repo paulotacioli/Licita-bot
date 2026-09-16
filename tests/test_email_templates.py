@@ -27,3 +27,22 @@ def test_template_resumo_diario_renderiza():
         faltando=["e-CNPJ"], fmt=_fmt_brl, dashboard="http://x", pncp=lambda o: "https://pncp.gov.br",
     )
     assert "Resumo" in html and "e-CNPJ" in html and "Órgão" in html
+
+
+def test_template_compativel_renderiza():
+    ck = {"completo": True, "alertas": ["O prazo do SICAF já passou."],
+          "numeros": [{"rotulo": "Valor estimado", "valor": "R$ 1.000,00", "obs": ""}],
+          "prazos": [{"rotulo": "SICAF", "valor": "10/09/2026", "obs": "PRAZO JÁ PASSOU"}],
+          "itens": [{"titulo": "Balanço", "detalhe": "", "status": "pendente", "fonte": "8.5", "fase": "habilitação"}],
+          "resumo": {"ok": 0, "pendente": 1, "atencao": 0, "verificar": 0, "robo": 0}}
+    html = _env().get_template("compativel.html.j2").render(op=_op(), req=None, ck=ck, fmt=_fmt_brl, dashboard="http://x/oportunidades/1", link_pncp="https://pncp.gov.br")
+    assert "FALTA" in html and "Balanço" in html and "SICAF já passou" in html and "http://x/oportunidades/1" in html
+
+
+def test_template_resumo_diario_mostra_pendencias():
+    html = _env().get_template("resumo_diario.html.j2").render(
+        data="08/09/2026", novas=[_op()], relevantes=[_op()], fila=3, erros=0, enviados_ontem=2, limite=50, ok_onb=True,
+        faltando=[], fmt=_fmt_brl, dashboard="http://x/", pncp=lambda o: "https://pncp.gov.br",
+        premissas={1: {"pendentes": ["Balanço patrimonial e DRE"], "n": 1, "completo": True}},
+    )
+    assert "1 pendência(s)" in html and "Falta: Balanço" in html

@@ -28,6 +28,10 @@
         {{ i.ico('lista') }} Oportunidades
         {% if nav_contagem.ativas %}<span class="count">{{ nav_contagem.ativas }}</span>{% endif %}
       </a>
+      <a href="/?vista=compativeis" class="{{ 'on' if pagina == 'compativeis' }}">
+        {{ i.ico('ok') }} Compatíveis
+        {% if nav_contagem.compativeis %}<span class="count">{{ nav_contagem.compativeis }}</span>{% endif %}
+      </a>
       <a href="/?status=AGUARDANDO_APROVACAO" class="{{ 'on' if pagina == 'aprovacao' }}">
         {{ i.ico('relogio') }} Aguardando aprovação
         {% if nav_contagem.aprovacao %}<span class="count">{{ nav_contagem.aprovacao }}</span>{% endif %}

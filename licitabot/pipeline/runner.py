@@ -137,7 +137,20 @@ def run_step(ref: int | str, step: str, force: bool = False) -> bool:
         return False
     with db_session() as session:
         op = session.get(Oportunidade, oid)
-        return op.status == STEPS[step][1]
+        avancou = op.status == STEPS[step][1]
+    if avancou and step == "analysis":
+        _avisar_compativel(oid)
+    return avancou
+
+
+def _avisar_compativel(oid: int) -> None:
+    """E-mail com valor, prazos e checklist de premissas. Falha de e-mail não derruba o pipeline."""
+    from licitabot.pipeline.notify import send_match_email
+
+    try:
+        send_match_email(oid)
+    except Exception as e:  # noqa: BLE001
+        log.warning("%s: e-mail de licitação compatível falhou: %s", oid, e)
 
 
 def run_until(ref: int | str, ate: str = "notify") -> None:

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Licitação compatível</title></head>
+<body style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;padding:24px;color:#1f2937">
+<div style="max-width:720px;margin:0 auto;background:#fff;border-radius:10px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+  <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot · licitação compatível #{{ op.id }}</p>
+  <h1 style="font-size:20px;margin:0 0 4px">{{ op.orgao_nome }} <span style="color:#6b7280;font-weight:normal">({{ op.esfera }} · {{ op.uf }})</span></h1>
+  <p style="margin:0 0 14px;color:#374151">{{ op.modalidade_nome }} · {{ op.numero_controle_pncp }}{% if op.uasg %} · UASG {{ op.uasg }}{% endif %}{% if op.portal %} · portal {{ op.portal }}{% endif %}</p>
+  <p style="margin:0 0 18px"><b>Objeto:</b> {{ op.objeto }}</p>
+
+  {% if ck.alertas %}
+  <div style="background:#fef2f2;border:1px solid #fca5a5;padding:12px;border-radius:8px;margin:0 0 18px;font-size:13px">
+    <b style="color:#b91c1c">Antes de qualquer coisa</b>
+    <ul style="margin:6px 0 0;padding-left:20px">{% for a in ck.alertas %}<li>{{ a }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <h2 style="font-size:15px;margin:18px 0 6px">Números que decidem</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px">
+    {% for n in ck.numeros %}
+    <tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:7px 0;color:#6b7280;width:44%">{{ n.rotulo }}</td>
+      <td style="padding:7px 0"><b>{{ n.valor }}</b>{% if n.obs %}<br><span style="font-size:12px;color:#6b7280">{{ n.obs }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2 style="font-size:15px;margin:18px 0 6px">Prazos</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px">
+    {% for p in ck.prazos %}
+    <tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:7px 0;color:#6b7280;width:44%">{{ p.rotulo }}</td>
+      <td style="padding:7px 0"><b>{{ p.valor }}</b>{% if p.obs %}<br><span style="font-size:12px;color:{{ '#b91c1c' if 'PASSOU' in p.obs else '#6b7280' }}">{{ p.obs }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2 style="font-size:15px;margin:18px 0 6px">Checklist de premissas
+    <span style="font-weight:normal;font-size:12px;color:#6b7280">· {{ ck.resumo.ok }} ok · {{ ck.resumo.pendente }} pendente(s) · {{ ck.resumo.atencao }} atenção · {{ ck.resumo.verificar }} a conferir · {{ ck.resumo.robo }} o robô gera</span>
+  </h2>
+  {% if not ck.completo %}
+  <p style="font-size:13px;color:#6b7280;margin:0 0 8px">O edital ainda não foi analisado em detalhe; abaixo vai o que já dá para conferir.</p>
+  {% endif %}
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    {% for it in ck.itens %}
+    {% set cor = {'ok':'#16a34a','pendente':'#dc2626','atencao':'#b45309','verificar':'#6b7280','robo':'#0369a1'}[it.status] %}
+    {% set rot = {'ok':'OK','pendente':'FALTA','atencao':'ATENÇÃO','verificar':'CONFERIR','robo':'ROBÔ'}[it.status] %}
+    <tr style="border-bottom:1px solid #e5e7eb;vertical-align:top">
+      <td style="padding:7px 8px 7px 0;white-space:nowrap;width:74px"><span style="display:inline-block;padding:2px 8px;border-radius:99px;background:{{ cor }}18;color:{{ cor }};font-weight:bold;font-size:11px">{{ rot }}</span></td>
+      <td style="padding:7px 0"><b>{{ it.titulo }}</b>{% if it.fase %} <span style="color:#9ca3af;font-size:11px">· {{ it.fase }}</span>{% endif %}{% if it.fonte %} <span style="color:#9ca3af;font-size:11px">· {{ it.fonte }}</span>{% endif %}
+        {% if it.detalhe %}<br><span style="color:#6b7280">{{ it.detalhe }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% if req and req.itens %}
+  <h2 style="font-size:15px;margin:18px 0 6px">Itens do edital</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px">Item</th><th style="text-align:left;padding:6px">Descrição</th><th style="text-align:right;padding:6px">Qtd</th><th style="text-align:right;padding:6px">Est. unit.</th></tr>
+    {% for i in req.itens %}
+    <tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:6px">{{ i.numero_item or '-' }}</td>
+      <td style="padding:6px">{{ i.descricao[:140] }}<span style="color:#9ca3af"> · {{ i.tipo }}</span></td>
+      <td style="padding:6px;text-align:right">{{ "%g"|format(i.quantidade) if i.quantidade else '-' }} {{ i.unidade }}</td>
+      <td style="padding:6px;text-align:right">{{ fmt(i.valor_estimado_unitario) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <div style="text-align:center;margin:24px 0 8px">
+    <a href="{{ dashboard }}" style="display:inline-block;background:#0d7d72;color:#fff;text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:8px;margin:4px">Abrir no painel</a>
+    <a href="{{ link_pncp }}" style="display:inline-block;background:#e5e7eb;color:#1f2937;text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:8px;margin:4px">Edital no PNCP</a>
+  </div>
+  <p style="font-size:12px;color:#6b7280;margin-top:18px">O robô segue com precificação e documentos; você recebe outro e-mail quando a proposta estiver pronta para aprovar.
+  Piso de inexequibilidade e prazo do SICAF seguem a regra usual do Compras.gov.br: confirme no edital.</p>
+</div>
+</body></html>

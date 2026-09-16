@@ -26,11 +26,30 @@
       <td style="padding:6px">{{ o.orgao_nome[:40] }}<br><span style="color:#6b7280">{{ o.esfera }} · {{ o.uf }} · {{ o.modalidade_nome }}</span></td>
       <td style="padding:6px"><a href="{{ pncp(o) }}">{{ o.objeto[:180] }}</a></td>
       <td style="padding:6px;text-align:right">{{ fmt(o.valor_estimado) }}</td>
-      <td style="padding:6px;text-align:center;color:#6b7280">{{ o.status }}</td>
+      <td style="padding:6px;text-align:center;color:#6b7280">{{ o.status }}
+        {% set pk = (premissas or {}).get(o.id) %}{% if pk %}<br><span style="color:{{ '#dc2626' if pk.n else '#16a34a' }};font-size:12px">{{ pk.n }} pendência(s)</span>{% endif %}</td>
     </tr>
+    {% set pk = (premissas or {}).get(o.id) %}{% if pk and pk.pendentes %}
+    <tr><td colspan="5" style="padding:0 6px 8px;color:#6b7280;font-size:12px">Falta: {{ pk.pendentes|join('; ') }}{% if pk.n > pk.pendentes|length %} e mais {{ pk.n - pk.pendentes|length }}{% endif %}{% if not pk.completo %} · edital ainda não analisado{% endif %} · <a href="{{ dashboard }}oportunidades/{{ o.id }}">abrir</a></td></tr>
+    {% endif %}
     {% endfor %}
   </table>
   {% else %}<p style="color:#6b7280">Nenhuma nova licitação compatível nas últimas 24h.</p>{% endif %}
+
+  {% if relevantes %}
+  <h2 style="font-size:16px;margin:18px 0 8px">Em andamento (por prazo)</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    {% for o in relevantes[:15] %}
+    {% set pk = (premissas or {}).get(o.id) %}
+    <tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
+      <td style="padding:6px"><a href="{{ dashboard }}oportunidades/{{ o.id }}">#{{ o.id }} {{ o.orgao_nome[:36] }}</a> <span style="color:#6b7280">· {{ o.status }}</span></td>
+      <td style="padding:6px;text-align:right;white-space:nowrap">{{ fmt(o.valor_estimado) }}</td>
+      <td style="padding:6px;text-align:right;white-space:nowrap;color:{{ '#dc2626' if pk and pk.n else '#16a34a' }}">{{ pk.n if pk else '?' }} pend.</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
   <p style="font-size:12px;color:#6b7280;margin-top:22px">Dashboard: <a href="{{ dashboard }}">{{ dashboard }}</a></p>
 </div>
 </body></html>

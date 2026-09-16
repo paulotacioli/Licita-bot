@@ -96,6 +96,62 @@
 </div>
 {% endif %}
 
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Premissas para participar</h2>
+      <div class="card-note">
+        {% if ck.completo %}Montado a partir da análise do edital, do cofre de documentos e do cadastro da empresa.
+        {% else %}O edital ainda não foi analisado: aqui vai só o que o PNCP e o cofre já dizem. Depois da análise, a lista completa aparece.{% endif %}
+      </div>
+    </div>
+    <div class="ck-sum">
+      <span><b>{{ ck.resumo.ok }}</b> ok</span>
+      <span><b class="bad">{{ ck.resumo.pendente }}</b> falta</span>
+      <span><b class="warn">{{ ck.resumo.atencao }}</b> atenção</span>
+      <span><b>{{ ck.resumo.verificar }}</b> conferir</span>
+      <span><b>{{ ck.resumo.robo }}</b> o robô gera</span>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if ck.alertas %}
+    <div class="alert alert-bad">
+      {{ i.ico('alerta') }}
+      <div><b>Antes de qualquer coisa</b><ul>{% for a in ck.alertas %}<li>{{ a }}</li>{% endfor %}</ul></div>
+    </div>
+    {% endif %}
+    <div class="kv" style="margin-bottom:16px">
+      {% for n in ck.numeros %}
+      <div class="item"><div class="k">{{ n.rotulo }}</div><div class="v">{{ n.valor }}</div>{% if n.obs %}<div class="o">{{ n.obs }}</div>{% endif %}</div>
+      {% endfor %}
+      {% for p in ck.prazos %}
+      <div class="item {{ 'bad' if 'PASSOU' in p.obs or 'passou' in p.obs }}"><div class="k">{{ p.rotulo }}</div><div class="v">{{ p.valor }}</div>{% if p.obs %}<div class="o">{{ p.obs }}</div>{% endif %}</div>
+      {% endfor %}
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Situação</th><th>Exigência</th><th>Fase</th><th>Ref.</th></tr></thead>
+        <tbody>
+        {% for it in ck.itens %}
+          <tr>
+            <td class="nowrap"><span class="st st-{{ it.status }}">{{ {'ok':'OK','pendente':'FALTA','atencao':'ATENÇÃO','verificar':'CONFERIR','robo':'ROBÔ'}[it.status] }}</span></td>
+            <td><b>{{ it.titulo }}</b>{% if it.detalhe %}<div class="muted" style="font-size:12px">{{ it.detalhe }}</div>{% endif %}</td>
+            <td class="nowrap muted">{{ it.fase or '—' }}</td>
+            <td class="muted mono" style="font-size:11.5px">{{ it.fonte or '' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0">
+    <div class="card-note">Documento marcado como FALTA não está no cofre ou venceu. Guarde-o na pasta <span class="mono">cofre/</span> e rode <span class="mono">licitabot cofre-indexar</span>.</div>
+    <form method="post" action="/oportunidades/{{ op.id }}/acao">
+      <button class="btn sm" name="acao" value="email_compativel" title="Manda o e-mail de licitação compatível com este checklist para os destinatários configurados">{{ i.ico('sino', 14) }} Enviar checklist por e-mail</button>
+    </form>
+  </div>
+</div>
+
 {% if tri %}
 <div class="card">
   <div class="card-head">
