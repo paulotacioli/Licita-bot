@@ -46,11 +46,13 @@ def pendentes(session, limite: int) -> list[Oportunidade]:
     )
 
 
-def completar(limite: int = 300, tempo_maximo_s: float | None = None) -> dict[str, int]:
+def completar(limite: int = 300, tempo_maximo_s: float | None = None, detalhe_tambem: bool = False) -> dict[str, int]:
     """Preenche valor (e o que mais vier de graça no detalhe) das licitações relevantes sem valor.
 
     `tempo_maximo_s` serve ao resumo diário: melhor mandar o e-mail na hora com alguns valores a
-    menos do que atrasar meia hora porque o PNCP resolveu ficar lento."""
+    menos do que atrasar meia hora porque o PNCP resolveu ficar lento. Com `detalhe_tambem=False`
+    Por padrão o robô se contenta com o valor dos itens; `detalhe_tambem=True` consulta o detalhe
+    mesmo assim, para trazer prazo, portal e objeto completo — mais caro."""
     stats = {"consultadas": 0, "com_valor": 0, "sem_valor_publicado": 0, "erros": 0, "nao_consultadas": 0}
     with db_session() as session:
         alvos = [(o.id, o.orgao_cnpj, o.ano, o.sequencial) for o in pendentes(session, limite)]
@@ -66,20 +68,22 @@ def completar(limite: int = 300, tempo_maximo_s: float | None = None) -> dict[st
                 log.info("tempo esgotado: %s licitações ficam para a próxima rodada", stats["nao_consultadas"])
                 break
             stats["consultadas"] += 1
-            valor = None
-            det = None
+            valor, det = None, None
+            # Os itens vêm da API /api/pncp/v1 e respondem na hora; o detalhe (/api/consulta/v1)
+            # anda devolvendo timeout. Por isso a soma dos itens vem primeiro, e o detalhe só
+            # entra quando ela não resolve — é lá que estão prazo, portal e o objeto completo.
             try:
-                det = CompraDetalhe.model_validate(client.compra_detalhe(cnpj, ano, seq))
-                valor = det.valorTotalEstimado
+                itens = client.compra_itens(cnpj, ano, seq)
+                valor = sum((r.get("valorTotal") or 0) for r in itens) or None
             except Exception as e:  # noqa: BLE001
-                log.debug("detalhe indisponível para %s/%s/%s: %s", cnpj, ano, seq, e)
-                stats["erros"] += 1
-            if not valor:
-                try:  # alguns órgãos deixam o total em branco e só preenchem os itens
-                    itens = client.compra_itens(cnpj, ano, seq)
-                    valor = sum((r.get("valorTotal") or 0) for r in itens) or None
+                log.debug("itens indisponíveis para %s/%s/%s: %s", cnpj, ano, seq, e)
+            if not valor or detalhe_tambem:
+                try:
+                    det = CompraDetalhe.model_validate(client.compra_detalhe(cnpj, ano, seq))
+                    valor = valor or det.valorTotalEstimado
                 except Exception as e:  # noqa: BLE001
-                    log.debug("itens indisponíveis para %s/%s/%s: %s", cnpj, ano, seq, e)
+                    log.debug("detalhe indisponível para %s/%s/%s: %s", cnpj, ano, seq, e)
+                    stats["erros"] += 1
             with db_session() as session:
                 op = session.get(Oportunidade, oid)
                 if not op:

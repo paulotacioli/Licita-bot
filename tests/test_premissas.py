@@ -94,24 +94,24 @@ def test_para_dict_serializa():
     assert d["itens"][0]["status"] in ("ok", "pendente", "atencao", "verificar", "robo")
 
 
-def test_completar_valores_usa_o_detalhe_e_cai_para_os_itens(monkeypatch):
-    """Sem valor no detalhe, a soma dos itens vale; e o detalhe corrige o objeto truncado da busca."""
+def test_completar_valores_soma_os_itens_e_cai_para_o_detalhe(monkeypatch):
+    """A soma dos itens é a fonte rápida; sem itens, vale o detalhe — que ainda corrige o objeto truncado."""
     from licitabot.db.models import Oportunidade
     from licitabot.pipeline import valores
     from licitabot.pipeline.states import Status
 
     with db_session() as s:
-        a = Oportunidade(numero_controle_pncp="v-1", orgao_cnpj="1", ano=2026, sequencial=1,
-                         status=Status.DESCOBERTA, pre_triagem="relevante", objeto="Objeto curto")
-        b = Oportunidade(numero_controle_pncp="v-2", orgao_cnpj="2", ano=2026, sequencial=2,
-                         status=Status.DESCOBERTA, pre_triagem="incerto", objeto="Outro")
-        s.add(a), s.add(b)
+        sem_itens = Oportunidade(numero_controle_pncp="v-1", orgao_cnpj="1", ano=2026, sequencial=1,
+                                 status=Status.DESCOBERTA, pre_triagem="relevante", objeto="Objeto curto")
+        com_itens = Oportunidade(numero_controle_pncp="v-2", orgao_cnpj="2", ano=2026, sequencial=2,
+                                 status=Status.DESCOBERTA, pre_triagem="incerto", objeto="Outro")
+        s.add(sem_itens), s.add(com_itens)
         s.commit()
-        ids = (a.id, b.id)
+        ids = (sem_itens.id, com_itens.id)
 
     class ClienteFake:
         def __init__(self, **kw):
-            pass
+            self.detalhes_pedidos = []
 
         def __enter__(self):
             return self
@@ -119,13 +119,12 @@ def test_completar_valores_usa_o_detalhe_e_cai_para_os_itens(monkeypatch):
         def __exit__(self, *e):
             return False
 
-        def compra_detalhe(self, cnpj, ano, seq):
-            if cnpj == "1":
-                return {"valorTotalEstimado": 120000.0, "objetoCompra": "Objeto curto, agora completo e bem maior"}
-            return {"valorTotalEstimado": None}
-
         def compra_itens(self, cnpj, ano, seq):
-            return [{"valorTotal": 300.0}, {"valorTotal": 700.0}]
+            return [] if cnpj == "1" else [{"valorTotal": 300.0}, {"valorTotal": 700.0}]
+
+        def compra_detalhe(self, cnpj, ano, seq):
+            assert cnpj == "1", "com itens respondendo, o detalhe lento não deve ser consultado"
+            return {"valorTotalEstimado": 120000.0, "objetoCompra": "Objeto curto, agora completo e bem maior"}
 
     monkeypatch.setattr(valores, "PNCPClient", ClienteFake)
     stats = valores.completar(limite=10)
@@ -133,7 +132,7 @@ def test_completar_valores_usa_o_detalhe_e_cai_para_os_itens(monkeypatch):
     with db_session() as s:
         a, b = s.get(Oportunidade, ids[0]), s.get(Oportunidade, ids[1])
         assert a.valor_estimado == 120000.0 and "bem maior" in a.objeto
-        assert b.valor_estimado == 1000.0  # soma dos itens
+        assert b.valor_estimado == 1000.0
         for o in (a, b):
             s.delete(o)
         s.commit()
