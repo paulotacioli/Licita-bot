@@ -1,0 +1,52 @@
+{% import "_icons.html" as i %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex, nofollow">
+<title>Participar desta licitação? · Licita-Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ assets_v }}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="plain">
+<main class="panel wide">
+  {% if not info %}
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('alerta', 22) }}</span>
+      <h1>Link inválido ou expirado</h1>
+      <p>Decida pelo painel, na página da licitação.</p>
+    </div>
+  {% else %}
+    <div class="panel-head">
+      <span class="brand-mark">{{ i.ico('robo', 22) }}</span>
+      <h1>{% if info.acao == 'liberar' %}Preparar a proposta desta licitação?{% else %}Descartar esta licitação?{% endif %}</h1>
+      <p>{{ info.orgao }}</p>
+    </div>
+    <div class="panel-body">
+      <p>{{ info.objeto|truncate(400, True) }}</p>
+      <div class="grid-2" style="gap:12px;margin:18px 0">
+        <div><div class="hint mb0">Prazo para propostas</div><b class="mono">{{ info.prazo }}</b></div>
+        <div><div class="hint mb0">Valor estimado</div><b class="mono" style="font-size:17px">{{ info.valor|brl }}</b></div>
+      </div>
+      {% if info.ja_liberada and info.acao == 'liberar' %}
+      <div class="alert alert-ok">{{ i.ico('ok') }}<div>Esta licitação já está liberada; o robô está preparando.</div></div>
+      {% endif %}
+      <form method="post" action="/liberar" style="margin-top:6px">
+        <input type="hidden" name="token" value="{{ token }}">
+        <button class="btn block {{ 'ok' if info.acao == 'liberar' else 'bad' }}" type="submit">
+          {% if info.acao == 'liberar' %}Sim, prepare os documentos{% else %}Sim, descartar{% endif %}
+        </button>
+      </form>
+    </div>
+    <div class="panel-foot">
+      {% if info.acao == 'liberar' %}Liberar não envia nada. O robô precifica, gera os documentos e volta a pedir sua aprovação antes de enviar ao portal.
+      {% else %}A licitação sai da lista. Dá para reabrir pelo painel.{% endif %}
+    </div>
+  {% endif %}
+</main>
+</body>
+</html>

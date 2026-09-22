@@ -22,7 +22,7 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from licitabot.approval.service import decidir_por_token, descricao_token
-from licitabot.config import get_settings, load_empresa
+from licitabot.config import exigir_liberacao, get_settings, load_empresa
 from licitabot.db.models import Aprovacao, DocumentoGerado, Evento, Item, OnboardingPasso, Oportunidade, Triagem
 from licitabot.db.session import db_session, init_db
 from licitabot.pipeline import premissas
@@ -187,6 +187,7 @@ def _ctx(request: Request, **extra) -> dict:
         "contagem": contagem,
         "usuario": sessao.get("u", ""),
         "dry_run": get_settings().dry_run,
+        "exige_liberacao": exigir_liberacao(),
         "empresa_nome": (load_empresa().nome_fantasia or load_empresa().razao_social or "")[:26],
         "mensagem": request.query_params.get("ok"),
     }
@@ -500,6 +501,29 @@ class Filtros:
         return q
 
 
+# ---------- liberação para preparar a proposta (link do e-mail, sem login) ----------
+
+
+@app.get("/liberar/{token}", response_class=HTMLResponse)
+def liberar_confirmar(request: Request, token: str):
+    """Página de confirmação. Abrir o e-mail (ou o link) não decide nada: só o botão decide."""
+    from licitabot.approval.liberacao import descrever
+
+    if _rate_limited(_ip(request), limite=60, janela=60):
+        return HTMLResponse("Muitas tentativas. Aguarde um minuto.", status_code=429)
+    return templates.TemplateResponse(request, "liberar.html", {"info": descrever(token), "token": token})
+
+
+@app.post("/liberar", response_class=HTMLResponse)
+def liberar(request: Request, token: str = Form(...)):
+    from licitabot.approval.liberacao import aplicar
+
+    if _rate_limited(_ip(request), limite=30, janela=60):
+        return HTMLResponse("Muitas tentativas. Aguarde um minuto.", status_code=429)
+    ok, msg = aplicar(token)
+    return templates.TemplateResponse(request, "resultado.html", {"ok": ok, "msg": msg})
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     f = Filtros(request)
@@ -545,7 +569,7 @@ def detalhe(request: Request, oid: int):
 
 
 @app.post("/oportunidades/{oid}/acao")
-def acao(oid: int, acao: str = Form(...)):
+def acao(request: Request, oid: int, acao: str = Form(...)):
     """Ações do painel, equivalentes aos comandos da CLI."""
     from licitabot.approval.service import decidir_por_cli
     from licitabot.db.session import set_status
@@ -568,6 +592,12 @@ def acao(oid: int, acao: str = Form(...)):
             if op.status == Status.ZONA_CINZENTA:
                 set_status(session, op, Status.TRIADA_RELEVANTE, "promovida manualmente no painel")
                 session.commit()
+    elif acao in ("liberar", "nao_participar"):
+        from licitabot.approval.liberacao import decidir
+
+        sessao = getattr(request.state, "sessao", None) or {}
+        ok, msg = decidir(oid, acao == "liberar", sessao.get("u", "painel"))
+        return RedirectResponse(url=f"/oportunidades/{oid}?ok={msg}", status_code=303)
     elif acao == "email_compativel":
         from licitabot.pipeline.notify import send_match_email
 

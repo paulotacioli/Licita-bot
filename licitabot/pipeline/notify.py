@@ -15,9 +15,10 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlmodel import select
 
+from licitabot.approval.liberacao import link_descartar, link_liberar
 from licitabot.approval.service import decidir_por_email, montar_snapshot
 from licitabot.approval.tokens import expiracao_para, gerar_token, snapshot_hash, token_hash
-from licitabot.config import destinatarios, get_settings, hora_resumo, limite_diario, load_empresa, somente_resumo
+from licitabot.config import destinatarios, exigir_liberacao, get_settings, hora_resumo, limite_diario, load_empresa, somente_resumo
 from licitabot.db.models import Aprovacao, DocumentoGerado, ExecucaoPortal, Item, Oportunidade, utcnow
 from licitabot.db.session import db_session, log_evento, set_status
 from licitabot.pipeline.analysis import get_requisitos
@@ -225,6 +226,7 @@ def send_match_email(oportunidade_id: int, forcar: bool = False) -> bool:
     atestado. Conta no limite diário e é enviado uma vez por licitação. Devolve True se enviou."""
     from licitabot.pipeline import premissas
 
+    s_ = get_settings()
     if not destinatarios():
         log.info("%s: sem destinatários configurados; e-mail de compatível não enviado", oportunidade_id)
         return False
@@ -240,8 +242,11 @@ def send_match_email(oportunidade_id: int, forcar: bool = False) -> bool:
             return False
         req = get_requisitos(session, op)
         ck = premissas.para_dict(premissas.montar(session, op, req))
+        base = s_.public_base_url.rstrip("/")
         html = _env().get_template("compativel.html.j2").render(
             op=op, req=req, ck=ck, fmt=_fmt_brl,
+            exige_ok=exigir_liberacao() and not op.liberado_gerar,
+            link_liberar=link_liberar(base, op.id), link_descartar=link_descartar(base, op.id),
             dashboard=_dashboard(f"/oportunidades/{op.id}"),
             link_pncp=f"https://pncp.gov.br/app/editais/{op.orgao_cnpj}/{op.ano}/{op.sequencial}",
         )
@@ -316,7 +321,9 @@ def send_daily_digest() -> None:
             except Exception as e:  # noqa: BLE001
                 log.debug("premissas de %s no resumo: %s", o.id, e)
         prioritarias, demais = separar_prioritarias(novas)
+        base = s.public_base_url.rstrip("/")
         html = _env().get_template("resumo_diario.html.j2").render(
+            liberar=lambda o: link_liberar(base, o.id), exige_ok=exigir_liberacao(),
             data=agora.strftime("%d/%m/%Y"), novas=novas, prioritarias=prioritarias, demais=demais,
             total_novas=_fmt_brl(sum(o.valor_estimado or 0 for o in novas)),
             total_prioritarias=_fmt_brl(sum(o.valor_estimado or 0 for o in prioritarias)),

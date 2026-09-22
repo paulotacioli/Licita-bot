@@ -52,6 +52,11 @@ class Oportunidade(SQLModel, table=True):
     # Pré-triagem por IA a partir do objeto (antes de baixar o edital): relevante | irrelevante | incerto | ""
     pre_triagem: str = Field(default="", index=True)
     pre_triagem_motivo: str = Field(default="", sa_column=Column(Text))
+    # Liberação do dono para preparar a proposta. Enquanto for False, o robô analisa o edital e avisa,
+    # mas não precifica nem gera documento algum (ver config/notificacoes.yaml: exigir_liberacao).
+    liberado_gerar: bool = False
+    liberado_em: Optional[datetime] = None
+    liberado_por: str = ""
     erro_ultimo: str = Field(default="", sa_column=Column(Text))
     tentativas: int = 0
     pasta: str = ""

@@ -45,6 +45,7 @@
         <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72">{{ o.objeto[:170] }}</a>
         {%- if pk and pk.n %}<br><span style="color:#dc2626;font-size:12px">{{ pk.n }} pendência(s): {{ pk.pendentes|join('; ') }}</span>{% endif %}
         <br><a href="{{ pncp(o) }}" style="color:#9ca3af;font-size:11px">edital no PNCP</a>
+        {%- if exige_ok and liberar(o) %} · <a href="{{ liberar(o) }}" style="color:#16a34a;font-size:12px;font-weight:bold">✔ quero participar</a>{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -79,6 +80,7 @@
   <p style="font-size:12px;color:#6b7280;margin-top:22px">
     Painel: <a href="{{ dashboard }}">{{ dashboard }}</a> · filtre por valor, UF e prazo lá dentro.<br>
     O que decide a prioridade e o que entra neste resumo está em Configurações → Perfil de interesse e Filtros técnicos.
+    {% if exige_ok %}<br>O robô não gera proposta nenhuma por conta própria: só depois do seu "quero participar".{% endif %}
   </p>
 </div>
 </body></html>

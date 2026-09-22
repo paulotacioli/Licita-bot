@@ -110,7 +110,9 @@
           <tr>
             <td class="id"><a href="/oportunidades/{{ o.id }}">{{ o.id }}</a></td>
             <td><span class="pill s-{{ o.status }}">{{ o.status|humano }}</span></td>
-            <td>{% if o.pre_triagem %}<span class="pill pre-{{ o.pre_triagem }}" title="{{ o.pre_triagem_motivo }}">{{ o.pre_triagem }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if o.liberado_gerar %}<span class="pill s-APROVADA" title="liberada por {{ o.liberado_por }}">liberada</span>
+              {%- elif o.pre_triagem %}<span class="pill pre-{{ o.pre_triagem }}" title="{{ o.pre_triagem_motivo }}">{{ o.pre_triagem }}</span>
+              {%- else %}<span class="muted">—</span>{% endif %}</td>
             <td class="nowrap mono" style="font-size:12px">{{ o.data_encerramento_proposta|dt }}
               {% if o.data_encerramento_proposta %}<div class="muted" style="font-size:11px;font-family:var(--sans)">{{ o.data_encerramento_proposta|faltam }}</div>{% endif %}</td>
             <td class="nowrap">{{ o.uf or '—' }}</td>

@@ -7,6 +7,9 @@ destinatarios: []
 # Máximo de licitações enviadas por e-mail em um dia; o excedente fica na fila para o dia seguinte.
 limite_diario_envios: 50
 
+# O robô só precifica e gera documentos depois do seu OK (link no e-mail ou botão no painel).
+exigir_liberacao: true
+
 # Um único e-mail por dia: as licitações novas chegam só no resumo, não uma a uma.
 # Pedidos de aprovação continuam saindo na hora, porque expiram.
 somente_resumo_diario: false

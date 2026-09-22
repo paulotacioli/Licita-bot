@@ -219,6 +219,8 @@ class Notificacoes(BaseModel):
     # True = um único e-mail por dia (o resumo). Os avisos por licitação ficam só no painel.
     # Pedidos de aprovação continuam saindo: têm prazo e exigem decisão.
     somente_resumo_diario: bool = False
+    # True = o robô só precifica e gera documentos depois de um OK seu (link no e-mail ou botão no painel).
+    exigir_liberacao: bool = True
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -273,6 +275,11 @@ def destinatarios(settings: Settings | None = None) -> list[str]:
 def somente_resumo(settings: Settings | None = None) -> bool:
     """True quando o dono pediu um único e-mail por dia: o resumo das novidades."""
     return bool(load_notificacoes(settings or get_settings()).somente_resumo_diario)
+
+
+def exigir_liberacao(settings: Settings | None = None) -> bool:
+    """True quando nenhuma proposta pode ser preparada sem o OK do dono."""
+    return bool(load_notificacoes(settings or get_settings()).exigir_liberacao)
 
 
 def limite_diario(settings: Settings | None = None) -> int:

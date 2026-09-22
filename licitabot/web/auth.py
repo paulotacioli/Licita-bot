@@ -28,7 +28,7 @@ COOKIE = "licitabot_sessao"
 DURACAO_SESSAO_S = 7 * 24 * 3600
 ITERACOES = 240_000
 # Prefixos liberados sem login. Tudo o mais exige sessão.
-ROTAS_PUBLICAS = ("/aprovar/", "/rejeitar/", "/decidir", "/login", "/primeiro-acesso", "/criar-conta", "/healthz", "/favicon.ico")
+ROTAS_PUBLICAS = ("/aprovar/", "/rejeitar/", "/decidir", "/liberar", "/login", "/primeiro-acesso", "/criar-conta", "/healthz", "/favicon.ico")
 DURACAO_CONVITE_S = 48 * 3600
 
 

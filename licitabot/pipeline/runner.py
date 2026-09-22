@@ -8,7 +8,7 @@ from typing import Callable
 
 from sqlmodel import select
 
-from licitabot.config import get_settings, limite_diario
+from licitabot.config import exigir_liberacao, get_settings, limite_diario
 from licitabot.db.models import Oportunidade
 from licitabot.db.session import db_session, get_oportunidade, set_status
 from licitabot.pipeline.states import STEPS, Status, next_step_for
@@ -69,6 +69,8 @@ def _gate(session, op: Oportunidade, step: str) -> str | None:
     agora = datetime.now()
     if op.data_encerramento_proposta and op.data_encerramento_proposta < agora and step not in ("monitor",):
         return "prazo de proposta já encerrado"
+    if step in ("pricing", "docgen", "prepare", "notify") and exigir_liberacao() and not op.liberado_gerar:
+        raise Adiar("aguardando sua liberação por e-mail para preparar a proposta")
     if step in ("prepare", "notify"):
         from licitabot.pipeline.notify import limite_diario_atingido
 

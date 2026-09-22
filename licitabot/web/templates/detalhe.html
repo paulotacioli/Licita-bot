@@ -25,6 +25,19 @@
       {{ i.ico('info') }}<div>{{ op.status_motivo }}</div>
     </div>
     {% endif %}
+    {% if exige_liberacao and not op.liberado_gerar and op.status not in ("DESCARTADA", "ENVIADA", "ENCERRADA", "EXPIRADA") %}
+    <div class="alert alert-info">
+      {{ i.ico('relogio') }}
+      <div><b>Esperando o seu OK.</b> O robô analisou o edital e parou aqui: só precifica e gera os documentos
+      depois que você clicar em <b>Quero participar</b> (abaixo, ou pelo link do e-mail).</div>
+    </div>
+    {% elif op.liberado_gerar %}
+    <div class="alert alert-ok">
+      {{ i.ico('ok') }}
+      <div><b>Liberada por {{ op.liberado_por or 'você' }}</b>{% if op.liberado_em %} em {{ op.liberado_em|dt }}{% endif %}.
+      O robô segue com preços, documentos e pede sua aprovação antes de enviar.</div>
+    </div>
+    {% endif %}
     {% if op.erro_ultimo %}
     <div class="alert alert-bad">{{ i.ico('alerta') }}<div><b>Último erro:</b> {{ op.erro_ultimo|truncate(400, True) }}</div></div>
     {% endif %}
@@ -65,6 +78,10 @@
 
   <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0">
     <form method="post" action="/oportunidades/{{ op.id }}/acao" class="btn-row" style="flex:1">
+      {% if exige_liberacao and not op.liberado_gerar and op.status not in ("DESCARTADA", "ENVIADA", "ENCERRADA", "EXPIRADA") %}
+        <button class="btn ok" name="acao" value="liberar">{{ i.ico('ok', 15) }} Quero participar: preparar proposta</button>
+        <button class="btn ghost" name="acao" value="nao_participar">Não quero esta</button>
+      {% endif %}
       {% if op.status == "AGUARDANDO_APROVACAO" %}
         <button class="btn ok" name="acao" value="aprovar"
                 onclick="return confirm('Aprovar e enviar a proposta? Uma proposta enviada é vinculante.')">

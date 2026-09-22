@@ -116,6 +116,9 @@ SECOES: list[Secao] = [
             Campo("limite_diario_envios", "Limite de licitações por dia", "inteiro", minimo=1, maximo=500,
                   ajuda="Máximo de licitações enviadas por e-mail em um dia. O excedente fica na fila, "
                         "sempre priorizando o prazo mais próximo."),
+            Campo("exigir_liberacao", "Só gerar documentos depois do meu OK", "booleano",
+                  ajuda="Ligado: o robô analisa o edital e avisa, mas só precifica e gera a proposta "
+                        "depois que você clicar em 'quero participar' no e-mail ou no painel."),
             Campo("somente_resumo_diario", "Só um e-mail por dia (o resumo)", "booleano",
                   ajuda="Ligado: as licitações novas chegam apenas no resumo diário, e não uma a uma. "
                         "Pedidos de aprovação continuam sendo enviados na hora, porque têm prazo."),

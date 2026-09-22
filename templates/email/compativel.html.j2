@@ -67,11 +67,19 @@
   </table>
   {% endif %}
 
-  <div style="text-align:center;margin:24px 0 8px">
+  {% if exige_ok %}
+  <div style="background:#f0fdfa;border:1px solid #99d6ce;border-radius:8px;padding:16px;margin:24px 0;text-align:center">
+    <p style="margin:0 0 12px;font-size:14px"><b>Quer participar desta?</b><br>
+      <span style="color:#6b7280;font-size:13px">O robô só vai precificar e gerar os documentos se você disser que sim.</span></p>
+    <a href="{{ link_liberar }}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:bold;padding:13px 28px;border-radius:8px;margin:4px">✔ Sim, prepare a proposta</a>
+    <a href="{{ link_descartar }}" style="display:inline-block;background:#e5e7eb;color:#1f2937;text-decoration:none;font-weight:bold;padding:13px 28px;border-radius:8px;margin:4px">Não quero esta</a>
+  </div>
+  {% endif %}
+  <div style="text-align:center;margin:18px 0 8px">
     <a href="{{ dashboard }}" style="display:inline-block;background:#0d7d72;color:#fff;text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:8px;margin:4px">Abrir no painel</a>
     <a href="{{ link_pncp }}" style="display:inline-block;background:#e5e7eb;color:#1f2937;text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:8px;margin:4px">Edital no PNCP</a>
   </div>
-  <p style="font-size:12px;color:#6b7280;margin-top:18px">O robô segue com precificação e documentos; você recebe outro e-mail quando a proposta estiver pronta para aprovar.
+  <p style="font-size:12px;color:#6b7280;margin-top:18px">{% if exige_ok %}Nada é gerado nem enviado sem o seu OK; depois dos documentos prontos, você ainda recebe o pedido de aprovação final.{% else %}O robô segue com precificação e documentos; você recebe outro e-mail quando a proposta estiver pronta para aprovar.{% endif %}
   Piso de inexequibilidade e prazo do SICAF seguem a regra usual do Compras.gov.br: confirme no edital.</p>
 </div>
 </body></html>
