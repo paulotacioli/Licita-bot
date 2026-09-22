@@ -56,7 +56,7 @@ def enviar_email(assunto: str, html: str, anexos: list[Path] | None = None, inli
             "em Configurações > Notificações (ou OWNER_EMAIL no .env)."
         )
     msg = EmailMessage()
-    msg["From"] = s.smtp_user
+    msg["From"] = s.smtp_from.strip() or s.smtp_user
     msg["To"] = ", ".join(para)
     msg["Subject"] = assunto
     msg_id = make_msgid(domain="licitabot.local")

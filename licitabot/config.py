@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
+    # Endereço que aparece como remetente, quando diferente da conta que autentica (precisa estar
+    # cadastrado como "enviar e-mail como" na conta SMTP; senão o Gmail reescreve para SMTP_USER)
+    smtp_from: str = ""
     imap_host: str = "imap.gmail.com"
     imap_port: int = 993
 
