@@ -198,6 +198,14 @@ def approve(ref: str, rejeitar: bool = typer.Option(False, "--rejeitar")):
     rprint(("[green]" if ok else "[red]") + msg)
 
 
+@app.command()
+def valores(limite: int = typer.Option(300, help="Máximo de licitações consultadas nesta rodada")):
+    """Busca no PNCP o valor estimado das licitações relevantes que ainda estão sem valor."""
+    from licitabot.pipeline.valores import completar
+
+    rprint(completar(limite=limite))
+
+
 @app.command("resumo-diario")
 def resumo_diario():
     """Envia agora o e-mail de resumo diário (novas licitações compatíveis, fila, bloqueios)."""

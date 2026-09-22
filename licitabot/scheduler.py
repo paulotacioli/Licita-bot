@@ -80,9 +80,17 @@ def job_relatorio_semanal() -> None:
     enviar_alerta("Relatório semanal", f"Situação em {datetime.now():%d/%m/%Y}", [f"{st}: {n}" for st, n in sorted(rows)])
 
 
+def job_valores() -> None:
+    from licitabot.pipeline.valores import completar
+
+    completar()
+
+
 def job_resumo_diario() -> None:
     from licitabot.pipeline.notify import send_daily_digest
+    from licitabot.pipeline.valores import completar
 
+    completar(limite=400)  # o e-mail do dia sai com o valor de cada licitação, não com um traço
     send_daily_digest()
 
 
@@ -92,6 +100,7 @@ def build_scheduler() -> BackgroundScheduler:
     sched.add_job(job_discover, CronTrigger(hour="6-20/2", minute=5), id="discover", name="Descoberta PNCP")
     sched.add_job(job_discover, CronTrigger(hour=23, minute=30), id="discover_noite")
     sched.add_job(job_resumo_diario, CronTrigger(hour=hora_resumo(), minute=0), id="resumo_diario", name="Resumo diário por e-mail")
+    sched.add_job(job_valores, IntervalTrigger(minutes=30), id="valores", name="Valor estimado das novas")
     sched.add_job(job_process, IntervalTrigger(minutes=15), id="process", name="Pipeline")
     sched.add_job(job_approvals, IntervalTrigger(minutes=5), id="approvals", name="Aprovações/envio")
     sched.add_job(job_monitor, IntervalTrigger(minutes=5), id="monitor", name="Monitor pós-envio")
