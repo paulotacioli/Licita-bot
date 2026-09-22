@@ -110,6 +110,9 @@ def test_completar_valores_usa_o_detalhe_e_cai_para_os_itens(monkeypatch):
         ids = (a.id, b.id)
 
     class ClienteFake:
+        def __init__(self, **kw):
+            pass
+
         def __enter__(self):
             return self
 

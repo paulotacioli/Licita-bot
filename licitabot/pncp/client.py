@@ -42,10 +42,18 @@ def _retryable(exc: BaseException) -> bool:
 
 
 class PNCPClient:
-    def __init__(self, timeout: float = 150.0):
+    """Cliente HTTP do PNCP.
+
+    `tentativas` existe porque nem todo trabalho merece a mesma insistência: baixar o edital vale
+    esperar, mas uma consulta de valor que o PNCP responde com 504 depois de 5 minutos não vale —
+    é melhor desistir cedo e tentar de novo amanhã.
+    """
+
+    def __init__(self, timeout: float = 150.0, tentativas: int = 4):
+        self._tentativas = max(1, tentativas)
         self._client = httpx.Client(
             headers=HEADERS,
-            timeout=httpx.Timeout(timeout, connect=30.0),
+            timeout=httpx.Timeout(timeout, connect=min(30.0, timeout)),
             verify=_ssl_context(),
             follow_redirects=True,
             http2=False,
@@ -60,17 +68,20 @@ class PNCPClient:
     def __exit__(self, *exc) -> None:
         self.close()
 
-    @retry(
-        retry=retry_if_exception(_retryable),
-        stop=stop_after_attempt(4),
-        wait=wait_exponential_jitter(initial=5, max=90),
-        reraise=True,
-    )
     def _get(self, url: str, params: dict[str, Any] | None = None) -> httpx.Response:
-        log.debug("GET %s %s", url, params or "")
-        r = self._client.get(url, params=params)
-        r.raise_for_status()
-        return r
+        @retry(
+            retry=retry_if_exception(_retryable),
+            stop=stop_after_attempt(self._tentativas),
+            wait=wait_exponential_jitter(initial=5, max=90),
+            reraise=True,
+        )
+        def _uma_vez() -> httpx.Response:
+            log.debug("GET %s %s", url, params or "")
+            r = self._client.get(url, params=params)
+            r.raise_for_status()
+            return r
+
+        return _uma_vez()
 
     def get_json(self, url: str, params: dict[str, Any] | None = None) -> Any:
         return self._get(url, params).json()

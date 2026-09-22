@@ -90,7 +90,7 @@ def job_resumo_diario() -> None:
     from licitabot.pipeline.notify import send_daily_digest
     from licitabot.pipeline.valores import completar
 
-    completar(limite=400)  # o e-mail do dia sai com o valor de cada licitação, não com um traço
+    completar(limite=400, tempo_maximo_s=300)  # com valor, mas sem atrasar o e-mail das 20h
     send_daily_digest()
 
 

@@ -9,6 +9,7 @@ valor) só para as que interessam, para que o e-mail diário já mostre quanto v
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta
 
 from sqlmodel import or_, select
@@ -45,15 +46,25 @@ def pendentes(session, limite: int) -> list[Oportunidade]:
     )
 
 
-def completar(limite: int = 300) -> dict[str, int]:
-    """Preenche valor (e o que mais vier de graça no detalhe) das licitações relevantes sem valor."""
-    stats = {"consultadas": 0, "com_valor": 0, "sem_valor_publicado": 0, "erros": 0}
+def completar(limite: int = 300, tempo_maximo_s: float | None = None) -> dict[str, int]:
+    """Preenche valor (e o que mais vier de graça no detalhe) das licitações relevantes sem valor.
+
+    `tempo_maximo_s` serve ao resumo diário: melhor mandar o e-mail na hora com alguns valores a
+    menos do que atrasar meia hora porque o PNCP resolveu ficar lento."""
+    stats = {"consultadas": 0, "com_valor": 0, "sem_valor_publicado": 0, "erros": 0, "nao_consultadas": 0}
     with db_session() as session:
         alvos = [(o.id, o.orgao_cnpj, o.ano, o.sequencial) for o in pendentes(session, limite)]
     if not alvos:
         return stats
-    with PNCPClient() as client:
-        for oid, cnpj, ano, seq in alvos:
+    # 25 s e uma tentativa: o PNCP às vezes devolve 504 depois de cinco minutos, e ficar esperando
+    # trava a fila inteira. Quem falhar entra de novo amanhã, pela marca de valor_consultado_em.
+    with PNCPClient(timeout=25.0, tentativas=1) as client:
+        inicio = time.monotonic()
+        for i, (oid, cnpj, ano, seq) in enumerate(alvos):
+            if tempo_maximo_s and time.monotonic() - inicio > tempo_maximo_s:
+                stats["nao_consultadas"] = len(alvos) - i
+                log.info("tempo esgotado: %s licitações ficam para a próxima rodada", stats["nao_consultadas"])
+                break
             stats["consultadas"] += 1
             valor = None
             det = None
