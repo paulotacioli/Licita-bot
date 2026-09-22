@@ -28,7 +28,8 @@ def _resumo(**kw):
                 total_prioritarias="R$ 0,00", sem_valor=0, relevantes=[], fila=3, erros=0, enviados_ontem=2,
                 limite=50, ok_onb=False, faltando=["e-CNPJ"], fmt=_fmt_brl, dashboard="http://x/",
                 pncp=lambda o: "https://pncp.gov.br", premissas={}, obj=lambda o: o.objeto,
-                exige_ok=True, liberar=lambda o: "http://x/liberar/t")
+                exige_ok=True, liberar=lambda o: "http://x/liberar/t",
+                meses=lambda t: 12, por_mes=lambda o: "R$ 83,33")
     base.update(kw)
     return _env().get_template("resumo_diario.html.j2").render(**base)
 
@@ -95,3 +96,24 @@ def test_resumo_diario_mostra_objeto_limpo_e_motivo_da_ia():
     html = _resumo(novas=[op], demais=[op], obj=lambda o: limpar_objeto(o.objeto, 300))
     assert "Guarda de CT-e em nuvem — encaixa no perfil." in html
     assert "Contratação de empresa especializada" not in html
+
+
+def test_resumo_mostra_valor_mensal_quando_o_objeto_diz_o_prazo():
+    op = _op(objeto="Guarda de CT-e em nuvem pelo prazo de 12 (doze) meses", valor_estimado=1000.0)
+    html = _resumo(novas=[op], demais=[op])
+    assert "R$ 83,33/mês" in html and "total de 12 meses" in html
+
+
+def test_resumo_poe_a_frase_da_ia_antes_do_objeto():
+    op = _op(objeto="Contratação de empresa para guarda de CT-e", pre_triagem_motivo="Guarda de CT-e em nuvem.")
+    html = _resumo(novas=[op], demais=[op])
+    assert html.index("Guarda de CT-e em nuvem.") < html.index("Contratação de empresa para guarda")
+
+
+def test_periodo_meses_ignora_texto_sem_prazo():
+    from licitabot.pipeline.texto import periodo_meses, valor_por_mes
+
+    assert periodo_meses("Locação de sistema em nuvem") is None
+    assert valor_por_mes(1200.0, None) is None
+    assert valor_por_mes(1200.0, 1) is None  # contrato de um mês: o total já é o mensal
+    assert valor_por_mes(1200.0, 12) == 100.0

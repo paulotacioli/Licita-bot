@@ -57,3 +57,45 @@ def _cortar(t: str, limite: int) -> str:
         return trecho[: ponto + 1]
     espaco = trecho.rfind(" ")
     return (trecho[:espaco] if espaco > 0 else trecho).rstrip(" ,;:-") + "…"
+
+
+# ---------- período do contrato ----------
+# O PNCP publica um valor só, quase sempre o total do contrato. Saber em quantos meses ele se
+# divide muda a leitura: R$ 106 mil por 12 meses é um SaaS de R$ 8,8 mil/mês. O prazo costuma
+# estar escrito no próprio objeto ("pelo prazo de 12 (doze) meses").
+
+_EXTENSO = {
+    "um": 1, "seis": 6, "oito": 8, "dez": 10, "doze": 12, "quinze": 15, "dezoito": 18, "vinte": 20,
+    "vinte e quatro": 24, "trinta": 30, "trinta e seis": 36, "quarenta e oito": 48, "sessenta": 60,
+}
+RX_MESES_NUM = re.compile(r"(\d{1,3})\s*(?:\([^)]{0,40}\)\s*)?(?:\(?\s*)?mes(?:es|)\b", re.I)
+RX_MESES_EXT = re.compile(r"\b(" + "|".join(sorted(_EXTENSO, key=len, reverse=True)) + r")\s*(?:\([^)]{0,20}\)\s*)?mes(?:es|)\b", re.I)
+RX_ANOS = re.compile(r"(\d{1,2}|um|dois|três|tres|quatro|cinco)\s*(?:\([^)]{0,20}\)\s*)?ano(?:s|)\b", re.I)
+_ANOS_EXTENSO = {"um": 1, "dois": 2, "três": 3, "tres": 3, "quatro": 4, "cinco": 5}
+
+
+def periodo_meses(*textos: str | None) -> int | None:
+    """Meses de vigência citados no texto ('12 (doze) meses', '1 (um) ano'), ou None se não disser."""
+    for texto in textos:
+        t = " ".join((texto or "").split()).lower()
+        if not t:
+            continue
+        m = RX_MESES_NUM.search(t)
+        if m and 1 <= int(m.group(1)) <= 120:
+            return int(m.group(1))
+        m = RX_MESES_EXT.search(t)
+        if m:
+            return _EXTENSO[m.group(1).lower()]
+        m = RX_ANOS.search(t)
+        if m:
+            bruto = m.group(1).lower()
+            anos = int(bruto) if bruto.isdigit() else _ANOS_EXTENSO.get(bruto, 0)
+            if 1 <= anos <= 10:
+                return anos * 12
+    return None
+
+
+def valor_por_mes(valor_total: float | None, meses: int | None) -> float | None:
+    if not valor_total or not meses or meses <= 1:
+        return None
+    return valor_total / meses

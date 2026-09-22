@@ -39,11 +39,21 @@
     {% set pk = (premissas or {}).get(o.id) %}
     <tr style="border-bottom:1px solid #e5e7eb;vertical-align:top{% if destaque %};background:#f8fffe{% endif %}">
       <td style="padding:7px 6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
-      <td style="padding:7px 6px;text-align:right;white-space:nowrap"><b style="font-size:14px">{{ fmt(o.valor_estimado) }}</b></td>
+      <td style="padding:7px 6px;text-align:right;white-space:nowrap">
+        <b style="font-size:14px">{{ fmt(o.valor_estimado) }}</b>
+        {%- set m = meses(o.objeto) %}
+        {%- if m and o.valor_estimado %}<br><span style="color:#0f766e;font-size:12px">{{ por_mes(o) }}/mês</span>
+        <br><span style="color:#9ca3af;font-size:11px">total de {{ m }} meses</span>
+        {%- elif o.valor_estimado %}<br><span style="color:#9ca3af;font-size:11px">total; período não informado</span>{% endif %}
+      </td>
       <td style="padding:7px 6px">{{ o.orgao_nome[:38] }}<br><span style="color:#6b7280">{{ o.uf }} · {{ o.modalidade_nome }}</span></td>
       <td style="padding:7px 6px">
+        {%- if o.pre_triagem_motivo %}
+        <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#111827;font-weight:600;text-decoration:none;font-size:14px">{{ o.pre_triagem_motivo }}</a>
+        <br><span style="color:#6b7280">{{ obj(o) }}</span>
+        {%- else %}
         <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72;font-weight:600;text-decoration:none">{{ obj(o) }}</a>
-        {%- if o.pre_triagem_motivo %}<br><span style="color:#6b7280;font-size:12px">{{ o.pre_triagem_motivo }}</span>{% endif %}
+        {%- endif %}
         {%- if pk and pk.n %}<br><span style="color:#dc2626;font-size:12px">{{ pk.n }} pendência(s): {{ pk.pendentes|join('; ') }}</span>{% endif %}
         <br><a href="{{ pncp(o) }}" style="color:#9ca3af;font-size:11px">edital no PNCP</a>
         {%- if exige_ok and liberar(o) %} · <a href="{{ liberar(o) }}" style="color:#16a34a;font-size:12px;font-weight:bold">✔ quero participar</a>{% endif %}

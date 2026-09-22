@@ -17,6 +17,7 @@ from sqlmodel import select
 
 from licitabot.config import load_empresa
 from licitabot.db.models import DocumentoCofre, Oportunidade
+from licitabot.pipeline.texto import periodo_meses, valor_por_mes
 
 # Percentuais usuais quando o edital não diz: a Lei 14.133 deixa o piso de inexequibilidade de serviços
 # a critério do edital (50% é o mais comum) e limita PL/capital mínimo a 10% do estimado (art. 69, §3º).
@@ -129,6 +130,10 @@ def montar(session, op: Oportunidade, req: Any | None) -> Checklist:
     # ---------- números ----------
     if estimado:
         ck.numeros.append(("Valor estimado pelo órgão", brl(estimado), "acima disso a proposta é desclassificada"))
+        meses = periodo_meses(op.objeto, req.prazos.prazo_vigencia_contrato if req else None, req.prazos.prazo_execucao if req else None)
+        mensal = valor_por_mes(estimado, meses)
+        if mensal:
+            ck.numeros.append(("Valor estimado por mês", brl(mensal), f"o total se divide em {meses} meses de contrato"))
         piso = estimado * PISO_INEXEQUIVEL_PADRAO
         ck.numeros.append(("Piso de inexequibilidade", brl(piso), "abaixo de 50% do estimado o pregoeiro pode exigir prova de que o preço se sustenta; confira o percentual no edital"))
         pl_pct = None

@@ -5,7 +5,8 @@
   <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot · licitação compatível #{{ op.id }}</p>
   <h1 style="font-size:20px;margin:0 0 4px">{{ op.orgao_nome }} <span style="color:#6b7280;font-weight:normal">({{ op.esfera }} · {{ op.uf }})</span></h1>
   <p style="margin:0 0 14px;color:#374151">{{ op.modalidade_nome }} · {{ op.numero_controle_pncp }}{% if op.uasg %} · UASG {{ op.uasg }}{% endif %}{% if op.portal %} · portal {{ op.portal }}{% endif %}</p>
-  <p style="margin:0 0 18px"><b>Objeto:</b> {{ objeto_limpo or op.objeto }}</p>
+  {% if op.pre_triagem_motivo %}<p style="margin:0 0 10px;font-size:15px;font-weight:600">{{ op.pre_triagem_motivo }}</p>{% endif %}
+  <p style="margin:0 0 18px;color:#374151"><b>Objeto:</b> {{ objeto_limpo or op.objeto }}</p>
 
   {% if ck.alertas %}
   <div style="background:#fef2f2;border:1px solid #fca5a5;padding:12px;border-radius:8px;margin:0 0 18px;font-size:13px">

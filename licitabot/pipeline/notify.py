@@ -23,7 +23,7 @@ from licitabot.db.models import Aprovacao, DocumentoGerado, ExecucaoPortal, Item
 from licitabot.db.session import db_session, log_evento, set_status
 from licitabot.pipeline.analysis import get_requisitos
 from licitabot.pipeline.states import Status
-from licitabot.pipeline.texto import limpar_objeto
+from licitabot.pipeline.texto import limpar_objeto, periodo_meses, valor_por_mes
 
 log = logging.getLogger(__name__)
 
@@ -326,6 +326,7 @@ def send_daily_digest() -> None:
         html = _env().get_template("resumo_diario.html.j2").render(
             liberar=lambda o: link_liberar(base, o.id), exige_ok=exigir_liberacao(),
             obj=lambda o: limpar_objeto(o.objeto, 300),
+            meses=periodo_meses, por_mes=lambda o: _fmt_brl(valor_por_mes(o.valor_estimado, periodo_meses(o.objeto))),
             data=agora.strftime("%d/%m/%Y"), novas=novas, prioritarias=prioritarias, demais=demais,
             total_novas=_fmt_brl(sum(o.valor_estimado or 0 for o in novas)),
             total_prioritarias=_fmt_brl(sum(o.valor_estimado or 0 for o in prioritarias)),
