@@ -9,6 +9,7 @@ valor) só para as que interessam, para que o e-mail diário já mostre quanto v
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 
 from sqlmodel import or_, select
 
@@ -22,14 +23,20 @@ from licitabot.pncp.schemas import CompraDetalhe, parse_dt
 log = logging.getLogger(__name__)
 
 
+# O edital pode ser retificado e ganhar valor depois; por isso reconsultamos, mas só uma vez por dia.
+INTERVALO_RECONSULTA_H = 24
+
+
 def pendentes(session, limite: int) -> list[Oportunidade]:
-    """Licitações que interessam, ainda sem valor e ainda não baixadas."""
+    """Licitações que interessam, ainda sem valor, ainda não baixadas e não consultadas hoje."""
+    corte = datetime.now() - timedelta(hours=INTERVALO_RECONSULTA_H)
     return list(
         session.exec(
             select(Oportunidade)
             .where(
                 Oportunidade.valor_estimado == None,  # noqa: E711
                 Oportunidade.status == Status.DESCOBERTA,
+                or_(Oportunidade.valor_consultado_em == None, Oportunidade.valor_consultado_em < corte),  # noqa: E711
                 or_(Oportunidade.pre_triagem == "relevante", Oportunidade.pre_triagem == "incerto"),
             )
             .order_by(Oportunidade.data_encerramento_proposta)
@@ -66,6 +73,7 @@ def completar(limite: int = 300) -> dict[str, int]:
                 op = session.get(Oportunidade, oid)
                 if not op:
                     continue
+                op.valor_consultado_em = datetime.now()
                 if valor:
                     op.valor_estimado = valor
                     stats["com_valor"] += 1

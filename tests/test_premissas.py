@@ -134,3 +134,25 @@ def test_completar_valores_usa_o_detalhe_e_cai_para_os_itens(monkeypatch):
         for o in (a, b):
             s.delete(o)
         s.commit()
+
+
+def test_valores_nao_reconsulta_no_mesmo_dia():
+    """Órgão que não publica valor não pode ser consultado a cada meia hora para sempre."""
+    from datetime import datetime, timedelta
+
+    from licitabot.db.models import Oportunidade
+    from licitabot.pipeline import valores
+    from licitabot.pipeline.states import Status
+
+    with db_session() as s:
+        agora = Oportunidade(numero_controle_pncp="v-3", orgao_cnpj="3", ano=2026, sequencial=3, status=Status.DESCOBERTA,
+                             pre_triagem="relevante", valor_consultado_em=datetime.now() - timedelta(hours=2))
+        antiga = Oportunidade(numero_controle_pncp="v-4", orgao_cnpj="4", ano=2026, sequencial=4, status=Status.DESCOBERTA,
+                              pre_triagem="relevante", valor_consultado_em=datetime.now() - timedelta(hours=30))
+        s.add(agora), s.add(antiga)
+        s.commit()
+        pend = {o.numero_controle_pncp for o in valores.pendentes(s, 50)}
+        assert "v-4" in pend and "v-3" not in pend
+        for o in (agora, antiga):
+            s.delete(o)
+        s.commit()

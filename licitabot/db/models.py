@@ -52,6 +52,9 @@ class Oportunidade(SQLModel, table=True):
     # Pré-triagem por IA a partir do objeto (antes de baixar o edital): relevante | irrelevante | incerto | ""
     pre_triagem: str = Field(default="", index=True)
     pre_triagem_motivo: str = Field(default="", sa_column=Column(Text))
+    # Última consulta ao detalhe do PNCP só para pegar o valor (ver pipeline/valores.py). Alguns
+    # órgãos não publicam valor nenhum; sem esta marca, eles seriam reconsultados para sempre.
+    valor_consultado_em: Optional[datetime] = None
     # Liberação do dono para preparar a proposta. Enquanto for False, o robô analisa o edital e avisa,
     # mas não precifica nem gera documento algum (ver config/notificacoes.yaml: exigir_liberacao).
     liberado_gerar: bool = False
