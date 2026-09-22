@@ -33,7 +33,7 @@
       <th style="text-align:left;padding:6px">Prazo</th>
       <th style="text-align:right;padding:6px;white-space:nowrap">Valor estimado</th>
       <th style="text-align:left;padding:6px">Órgão</th>
-      <th style="text-align:left;padding:6px">Objeto</th>
+      <th style="text-align:left;padding:6px">O que o órgão quer</th>
     </tr>
     {% for o in lista %}
     {% set pk = (premissas or {}).get(o.id) %}
@@ -42,7 +42,8 @@
       <td style="padding:7px 6px;text-align:right;white-space:nowrap"><b style="font-size:14px">{{ fmt(o.valor_estimado) }}</b></td>
       <td style="padding:7px 6px">{{ o.orgao_nome[:38] }}<br><span style="color:#6b7280">{{ o.uf }} · {{ o.modalidade_nome }}</span></td>
       <td style="padding:7px 6px">
-        <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72">{{ o.objeto[:170] }}</a>
+        <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72;font-weight:600;text-decoration:none">{{ obj(o) }}</a>
+        {%- if o.pre_triagem_motivo %}<br><span style="color:#6b7280;font-size:12px">{{ o.pre_triagem_motivo }}</span>{% endif %}
         {%- if pk and pk.n %}<br><span style="color:#dc2626;font-size:12px">{{ pk.n }} pendência(s): {{ pk.pendentes|join('; ') }}</span>{% endif %}
         <br><a href="{{ pncp(o) }}" style="color:#9ca3af;font-size:11px">edital no PNCP</a>
         {%- if exige_ok and liberar(o) %} · <a href="{{ liberar(o) }}" style="color:#16a34a;font-size:12px;font-weight:bold">✔ quero participar</a>{% endif %}

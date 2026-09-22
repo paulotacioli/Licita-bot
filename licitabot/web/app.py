@@ -28,6 +28,7 @@ from licitabot.db.session import db_session, init_db
 from licitabot.pipeline import premissas
 from licitabot.pipeline.analysis import get_requisitos
 from licitabot.pipeline.states import Status
+from licitabot.pipeline.texto import limpar_objeto
 from licitabot.web import auth
 from licitabot.web import config_service as cfg
 
@@ -103,6 +104,7 @@ templates.env.filters["dt"] = _dt
 templates.env.filters["dt_longo"] = _dt_longo
 templates.env.filters["humano"] = _humano
 templates.env.filters["faltam"] = _faltam
+templates.env.filters["objeto"] = lambda t: limpar_objeto(t, 260)
 
 
 @app.on_event("startup")

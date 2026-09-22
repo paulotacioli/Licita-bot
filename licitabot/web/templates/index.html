@@ -119,8 +119,8 @@
             <td>{{ o.orgao_nome|truncate(52, True) }}<div class="muted" style="font-size:11.5px">{{ o.municipio }}{% if o.modalidade_nome %} · {{ o.modalidade_nome|replace(' - Eletrônico', '')|replace(' - Eletrônica', '') }}{% endif %}</div></td>
             <td class="num">{{ o.valor_estimado|brl_curto }}</td>
             <td class="obj">
-              <div class="obj-t">{{ o.objeto }}</div>
-              {% if o.pre_triagem_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.pre_triagem_motivo|truncate(110, True) }}</div>
+              <div class="obj-t">{{ o.objeto|objeto }}</div>
+              {% if o.pre_triagem_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.pre_triagem_motivo|truncate(150, True) }}</div>
               {% elif o.status_motivo %}<div class="muted" style="font-size:11.5px;margin-top:3px">{{ o.status_motivo|truncate(110, True) }}</div>{% endif %}
             </td>
           </tr>

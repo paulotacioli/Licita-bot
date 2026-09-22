@@ -27,7 +27,8 @@ def _resumo(**kw):
     base = dict(data="08/09/2026", novas=[_op()], prioritarias=[], demais=[_op()], total_novas="R$ 1.000,00",
                 total_prioritarias="R$ 0,00", sem_valor=0, relevantes=[], fila=3, erros=0, enviados_ontem=2,
                 limite=50, ok_onb=False, faltando=["e-CNPJ"], fmt=_fmt_brl, dashboard="http://x/",
-                pncp=lambda o: "https://pncp.gov.br", premissas={})
+                pncp=lambda o: "https://pncp.gov.br", premissas={}, obj=lambda o: o.objeto,
+                exige_ok=True, liberar=lambda o: "http://x/liberar/t")
     base.update(kw)
     return _env().get_template("resumo_diario.html.j2").render(**base)
 
@@ -64,3 +65,33 @@ def test_somente_resumo_bloqueia_email_avulso(monkeypatch):
     monkeypatch.setattr(notify, "destinatarios", lambda: ["a@b.com"])
     monkeypatch.setattr(notify, "enviar_email", lambda *a, **k: pytest.fail("não deveria enviar"))
     assert notify.send_match_email(1) is False
+
+
+def test_limpar_objeto_tira_preambulo_e_corta_na_palavra():
+    from licitabot.pipeline.texto import limpar_objeto
+
+    t = limpar_objeto("Contratação de empresa especializada para a prestação de serviços de captura e guarda "
+                      "de documentos fiscais eletrônicos (NF-e, CT-e) em nuvem, com suporte técnico", 120)
+    assert t.startswith("Captura e guarda")
+    assert "Contratação de empresa" not in t  # sem o preâmbulo, o texto inteiro coube no limite
+    assert len(t) <= 120 and not t.endswith("…")
+    curto = limpar_objeto("Contratação de empresa especializada para a prestação de serviços de captura e guarda "
+                          "de documentos fiscais eletrônicos (NF-e, CT-e) em nuvem, com suporte técnico", 40)
+    assert curto.endswith("…") and len(curto) <= 41
+
+
+def test_limpar_objeto_preserva_texto_curto_e_tira_etiqueta_do_portal():
+    from licitabot.pipeline.texto import limpar_objeto
+
+    assert limpar_objeto("[Portal de Compras Públicas] - Sistema de gestão de saúde") == "Sistema de gestão de saúde"
+    assert limpar_objeto("Aquisição de software") == "Aquisição de software"  # cortar deixaria sem sentido
+
+
+def test_resumo_diario_mostra_objeto_limpo_e_motivo_da_ia():
+    from licitabot.pipeline.texto import limpar_objeto
+
+    op = _op(objeto="Contratação de empresa especializada para prestação de serviços de guarda de CT-e em nuvem",
+             pre_triagem_motivo="Guarda de CT-e em nuvem — encaixa no perfil.")
+    html = _resumo(novas=[op], demais=[op], obj=lambda o: limpar_objeto(o.objeto, 300))
+    assert "Guarda de CT-e em nuvem — encaixa no perfil." in html
+    assert "Contratação de empresa especializada" not in html
