@@ -91,7 +91,7 @@ def build_scheduler() -> BackgroundScheduler:
     sched = BackgroundScheduler(timezone="America/Sao_Paulo", job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 600})
     sched.add_job(job_discover, CronTrigger(hour="6-20/2", minute=5), id="discover", name="Descoberta PNCP")
     sched.add_job(job_discover, CronTrigger(hour=23, minute=30), id="discover_noite")
-    sched.add_job(job_resumo_diario, CronTrigger(hour=hora_resumo(), minute=15), id="resumo_diario", name="Resumo diário por e-mail")
+    sched.add_job(job_resumo_diario, CronTrigger(hour=hora_resumo(), minute=0), id="resumo_diario", name="Resumo diário por e-mail")
     sched.add_job(job_process, IntervalTrigger(minutes=15), id="process", name="Pipeline")
     sched.add_job(job_approvals, IntervalTrigger(minutes=5), id="approvals", name="Aprovações/envio")
     sched.add_job(job_monitor, IntervalTrigger(minutes=5), id="monitor", name="Monitor pós-envio")
