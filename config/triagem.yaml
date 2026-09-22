@@ -34,7 +34,12 @@ perfil:
     exija infraestrutura física nossa no órgão.
 
     Serviço presencial de digitalização ou de organização de arquivo com equipe e scanners no local,
-    fornecimento ou locação de scanners e equipamentos, guarda física de caixas e papel.
+    fornecimento ou locação de scanners e equipamentos.
+
+    Guarda física externa de documentos: armazenamento, custódia e arquivamento de papel, caixas-arquivo
+    ou acervo em galpão do fornecedor, com transporte e consulta física — é serviço de armazém, não
+    software, e não serve nem quando o edital cita digitalização junto. Só interessa se a entrega for o
+    sistema online de guarda digital.
 
     Compra de equipamentos ou hardware, licenças de fabricante específico (Microsoft, Oracle, Adobe,
     antivírus), outsourcing de postos de trabalho ou alocação de mão de obra presencial, exigência de
@@ -170,9 +175,22 @@ palavras_negativas:
   - "aquisição de scanner"
   - "locação de scanner"
   - "fornecimento de scanners"
+  # Guarda física/externa de papel: é serviço de armazém, não software. Variantes sem acento porque
+  # o filtro compara texto cru do PNCP, onde a acentuação nem sempre vem certa.
   - "guarda física"
-  - "armazenamento físico de documentos"
+  - "guarda fisica"
+  - "guarda externa"
+  - "guarda terceirizada"
+  - "armazenamento físico"
+  - "armazenamento fisico"
+  - "arquivamento físico"
+  - "arquivamento fisico"
+  - "custódia física"
+  - "custodia fisica"
   - "custódia de caixas"
+  - "custodia de caixas"
+  - "caixas-arquivo"
+  - "documentos em papel"
 
 modalidades_aceitas: [6, 4, 8, 12]   # Pregão Eletrônico, Concorrência Eletrônica, Dispensa, Credenciamento
 ufs: []                              # vazio = Brasil inteiro; ex.: ["SP", "RJ", "MG"]
