@@ -194,6 +194,8 @@ class Triagem(BaseModel):
     termos_busca: list[str] = Field(default_factory=lambda: ["software", "sistema", "desenvolvimento de sistema"])
     palavras_negativas: list[str] = Field(default_factory=list)
     palavras_positivas: list[str] = Field(default_factory=list)  # vazio = não exige
+    # Objetos que batem com uma destas vão destacados no topo do resumo diário
+    palavras_prioritarias: list[str] = Field(default_factory=list)
     modalidades_aceitas: list[int] = Field(default_factory=lambda: [6, 4, 8, 12])
     ufs: list[str] = Field(default_factory=list)  # vazio = todas
     esferas: list[str] = Field(default_factory=list)  # vazio = todas (Federal, Estadual, Municipal)
@@ -214,6 +216,9 @@ class Notificacoes(BaseModel):
     destinatarios: list[str] = Field(default_factory=list)
     limite_diario_envios: int | None = None
     hora_resumo_diario: int | None = None
+    # True = um único e-mail por dia (o resumo). Os avisos por licitação ficam só no painel.
+    # Pedidos de aprovação continuam saindo: têm prazo e exigem decisão.
+    somente_resumo_diario: bool = False
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -263,6 +268,11 @@ def destinatarios(settings: Settings | None = None) -> list[str]:
     if lista:
         return lista
     return [s.owner_email.strip()] if s.owner_email.strip() else []
+
+
+def somente_resumo(settings: Settings | None = None) -> bool:
+    """True quando o dono pediu um único e-mail por dia: o resumo das novidades."""
+    return bool(load_notificacoes(settings or get_settings()).somente_resumo_diario)
 
 
 def limite_diario(settings: Settings | None = None) -> int:

@@ -17,7 +17,7 @@ from sqlmodel import select
 
 from licitabot.approval.service import decidir_por_email, montar_snapshot
 from licitabot.approval.tokens import expiracao_para, gerar_token, snapshot_hash, token_hash
-from licitabot.config import destinatarios, get_settings, limite_diario, load_empresa
+from licitabot.config import destinatarios, get_settings, hora_resumo, limite_diario, load_empresa, somente_resumo
 from licitabot.db.models import Aprovacao, DocumentoGerado, ExecucaoPortal, Item, Oportunidade, utcnow
 from licitabot.db.session import db_session, log_evento, set_status
 from licitabot.pipeline.analysis import get_requisitos
@@ -180,6 +180,9 @@ def send_info_email(oportunidade_id: int, motivo_portal: str) -> None:
     portal ainda não é possível (onboarding incompleto ou portal não suportado). Conta no limite diário."""
     s = get_settings()
     emp = load_empresa()
+    if somente_resumo():
+        log.info("%s: modo 'só o resumo diário'; informativo não enviado", oportunidade_id)
+        return
     with db_session() as session:
         op = session.get(Oportunidade, oportunidade_id)
         itens = session.exec(select(Item).where(Item.oportunidade_id == op.id).order_by(Item.numero_item)).all()
@@ -225,6 +228,9 @@ def send_match_email(oportunidade_id: int, forcar: bool = False) -> bool:
     if not destinatarios():
         log.info("%s: sem destinatários configurados; e-mail de compatível não enviado", oportunidade_id)
         return False
+    if somente_resumo() and not forcar:
+        log.info("%s: modo 'só o resumo diário'; a licitação entra no e-mail das %sh", oportunidade_id, hora_resumo())
+        return False
     with db_session() as session:
         op = session.get(Oportunidade, oportunidade_id)
         if not forcar and ja_enviado(session, op, "compativel"):
@@ -250,6 +256,23 @@ def send_match_email(oportunidade_id: int, forcar: bool = False) -> bool:
         _registrar_envio(session, op, "compativel", msg_id)
         session.commit()
         return True
+
+
+def separar_prioritarias(ops: list[Oportunidade]) -> tuple[list[Oportunidade], list[Oportunidade]]:
+    """Divide a lista em (prioritárias, demais) pelas palavras de config/triagem.yaml.
+
+    Prioridade é do negócio, não do robô: hoje são documentos fiscais eletrônicos e guarda em nuvem.
+    Quem manda é a lista `palavras_prioritarias`, editável no painel em Filtros técnicos."""
+    from licitabot.config import load_triagem
+
+    termos = [t.lower().strip() for t in load_triagem().palavras_prioritarias if t and t.strip()]
+    if not termos:
+        return [], list(ops)
+    prio, resto = [], []
+    for o in ops:
+        alvo = f"{o.objeto} {o.orgao_nome}".lower()
+        (prio if any(t in alvo for t in termos) else resto).append(o)
+    return prio, resto
 
 
 def send_daily_digest() -> None:
@@ -292,13 +315,21 @@ def send_daily_digest() -> None:
                 premissas_por_op[o.id] = {"pendentes": [i.titulo for i in ck.pendentes][:4], "n": len(ck.pendentes), "completo": ck.completo}
             except Exception as e:  # noqa: BLE001
                 log.debug("premissas de %s no resumo: %s", o.id, e)
+        prioritarias, demais = separar_prioritarias(novas)
         html = _env().get_template("resumo_diario.html.j2").render(
-            data=agora.strftime("%d/%m/%Y"), novas=novas, relevantes=relevantes, fila=len(fila), erros=len(erros), premissas=premissas_por_op,
+            data=agora.strftime("%d/%m/%Y"), novas=novas, prioritarias=prioritarias, demais=demais,
+            total_novas=_fmt_brl(sum(o.valor_estimado or 0 for o in novas)),
+            total_prioritarias=_fmt_brl(sum(o.valor_estimado or 0 for o in prioritarias)),
+            sem_valor=sum(1 for o in novas if not o.valor_estimado),
+            relevantes=relevantes, fila=len(fila), erros=len(erros), premissas=premissas_por_op,
             enviados_ontem=enviados_ontem, limite=limite_diario(), ok_onb=ok_onb, faltando=faltando,
             fmt=_fmt_brl, dashboard=_dashboard("/"),
             pncp=lambda o: f"https://pncp.gov.br/app/editais/{o.orgao_cnpj}/{o.ano}/{o.sequencial}",
         )
-        enviar_email(f"[LICITABOT] Resumo diário {agora:%d/%m}: {len(novas)} novas, {len(relevantes)} em análise, fila {len(fila)}", html)
+        assunto = f"[LICITABOT] Resumo {agora:%d/%m}: {len(novas)} novas · {_fmt_brl(sum(o.valor_estimado or 0 for o in novas))}"
+        if prioritarias:
+            assunto += f" · {len(prioritarias)} prioritárias"
+        enviar_email(assunto, html)
         log_evento(session, "email", f"resumo diário: {len(novas)} novas", None)
         session.commit()
 

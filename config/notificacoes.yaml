@@ -7,5 +7,9 @@ destinatarios: []
 # Máximo de licitações enviadas por e-mail em um dia; o excedente fica na fila para o dia seguinte.
 limite_diario_envios: 50
 
+# Um único e-mail por dia: as licitações novas chegam só no resumo, não uma a uma.
+# Pedidos de aprovação continuam saindo na hora, porque expiram.
+somente_resumo_diario: false
+
 # Hora de Brasília (0-23) em que sai o resumo diário.
 hora_resumo_diario: 8

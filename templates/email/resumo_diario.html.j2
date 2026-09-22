@@ -3,53 +3,82 @@
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f4f6f8;margin:0;padding:24px;color:#1f2937">
 <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:10px;padding:26px">
   <p style="font-size:12px;color:#6b7280;margin:0 0 8px">Licita-Bot · resumo diário</p>
-  <h1 style="font-size:20px;margin:0 0 14px">{{ data }}</h1>
-  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px">
-    <tr><td style="padding:5px 0;color:#6b7280">Novas licitações compatíveis (24h)</td><td><b>{{ novas|length }}</b></td></tr>
-    <tr><td style="padding:5px 0;color:#6b7280">Enviadas por e-mail ontem</td><td><b>{{ enviados_ontem }}</b> (limite diário {{ limite }})</td></tr>
-    <tr><td style="padding:5px 0;color:#6b7280">Em análise/preparação</td><td><b>{{ relevantes|length }}</b></td></tr>
-    <tr><td style="padding:5px 0;color:#6b7280">Fila (aguardando processamento)</td><td><b>{{ fila }}</b></td></tr>
-    <tr><td style="padding:5px 0;color:#6b7280">Com erro (ver dashboard)</td><td><b>{{ erros }}</b></td></tr>
+  <h1 style="font-size:20px;margin:0 0 4px">{{ data }}</h1>
+  <p style="margin:0 0 18px;color:#374151">
+    <b style="font-size:17px">{{ novas|length }}</b> licitações novas compatíveis ·
+    <b style="font-size:17px;color:#0d7d72">{{ total_novas }}</b> em valor estimado
+    {%- if sem_valor %} <span style="color:#6b7280">({{ sem_valor }} sem valor publicado)</span>{% endif %}
+  </p>
+
+  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
+    <tr style="background:#f0fdfa">
+      <td style="padding:8px 10px;color:#0f766e;border-radius:6px 0 0 6px"><b>Prioridade</b> (documentos fiscais, digitalização, nuvem)</td>
+      <td style="padding:8px 10px;text-align:right;border-radius:0 6px 6px 0"><b>{{ prioritarias|length }}</b> · {{ total_prioritarias }}</td>
+    </tr>
+    <tr><td style="padding:6px 10px;color:#6b7280">Demais compatíveis</td><td style="padding:6px 10px;text-align:right"><b>{{ demais|length }}</b></td></tr>
+    <tr><td style="padding:6px 10px;color:#6b7280">Em análise/preparação</td><td style="padding:6px 10px;text-align:right"><b>{{ relevantes|length }}</b></td></tr>
+    <tr><td style="padding:6px 10px;color:#6b7280">Fila de processamento</td><td style="padding:6px 10px;text-align:right"><b>{{ fila }}</b></td></tr>
+    <tr><td style="padding:6px 10px;color:#6b7280">Com erro (ver painel)</td><td style="padding:6px 10px;text-align:right"><b>{{ erros }}</b></td></tr>
   </table>
+
   {% if not ok_onb %}
   <div style="background:#fef3c7;border:1px solid #f59e0b;padding:10px 12px;border-radius:8px;margin-bottom:16px;font-size:13px">
     <b>Envio automático pelo portal bloqueado</b> até concluir: {{ faltando|join("; ") }}
   </div>
   {% endif %}
-  <h2 style="font-size:16px;margin:18px 0 8px">Novas nas últimas 24h</h2>
-  {% if novas %}
+
+  {% macro tabela(lista, destaque) %}
   <table style="width:100%;border-collapse:collapse;font-size:13px">
-    <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px">Prazo</th><th style="text-align:left;padding:6px">Órgão</th><th style="text-align:left;padding:6px">Objeto</th><th style="text-align:right;padding:6px">Valor est.</th><th style="padding:6px">Status</th></tr>
-    {% for o in novas %}
-    <tr style="border-bottom:1px solid #e5e7eb">
-      <td style="padding:6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
-      <td style="padding:6px">{{ o.orgao_nome[:40] }}<br><span style="color:#6b7280">{{ o.esfera }} · {{ o.uf }} · {{ o.modalidade_nome }}</span></td>
-      <td style="padding:6px"><a href="{{ pncp(o) }}">{{ o.objeto[:180] }}</a></td>
-      <td style="padding:6px;text-align:right">{{ fmt(o.valor_estimado) }}</td>
-      <td style="padding:6px;text-align:center;color:#6b7280">{{ o.status }}
-        {% set pk = (premissas or {}).get(o.id) %}{% if pk %}<br><span style="color:{{ '#dc2626' if pk.n else '#16a34a' }};font-size:12px">{{ pk.n }} pendência(s)</span>{% endif %}</td>
+    <tr style="background:#f3f4f6">
+      <th style="text-align:left;padding:6px">Prazo</th>
+      <th style="text-align:right;padding:6px;white-space:nowrap">Valor estimado</th>
+      <th style="text-align:left;padding:6px">Órgão</th>
+      <th style="text-align:left;padding:6px">Objeto</th>
     </tr>
-    {% set pk = (premissas or {}).get(o.id) %}{% if pk and pk.pendentes %}
-    <tr><td colspan="5" style="padding:0 6px 8px;color:#6b7280;font-size:12px">Falta: {{ pk.pendentes|join('; ') }}{% if pk.n > pk.pendentes|length %} e mais {{ pk.n - pk.pendentes|length }}{% endif %}{% if not pk.completo %} · edital ainda não analisado{% endif %} · <a href="{{ dashboard }}oportunidades/{{ o.id }}">abrir</a></td></tr>
-    {% endif %}
+    {% for o in lista %}
+    {% set pk = (premissas or {}).get(o.id) %}
+    <tr style="border-bottom:1px solid #e5e7eb;vertical-align:top{% if destaque %};background:#f8fffe{% endif %}">
+      <td style="padding:7px 6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
+      <td style="padding:7px 6px;text-align:right;white-space:nowrap"><b style="font-size:14px">{{ fmt(o.valor_estimado) }}</b></td>
+      <td style="padding:7px 6px">{{ o.orgao_nome[:38] }}<br><span style="color:#6b7280">{{ o.uf }} · {{ o.modalidade_nome }}</span></td>
+      <td style="padding:7px 6px">
+        <a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72">{{ o.objeto[:170] }}</a>
+        {%- if pk and pk.n %}<br><span style="color:#dc2626;font-size:12px">{{ pk.n }} pendência(s): {{ pk.pendentes|join('; ') }}</span>{% endif %}
+        <br><a href="{{ pncp(o) }}" style="color:#9ca3af;font-size:11px">edital no PNCP</a>
+      </td>
+    </tr>
     {% endfor %}
   </table>
-  {% else %}<p style="color:#6b7280">Nenhuma nova licitação compatível nas últimas 24h.</p>{% endif %}
+  {% endmacro %}
+
+  {% if prioritarias %}
+  <h2 style="font-size:16px;margin:22px 0 8px;color:#0f766e">★ Prioridade — documentos fiscais, digitalização e nuvem</h2>
+  {{ tabela(prioritarias, True) }}
+  {% endif %}
+
+  <h2 style="font-size:16px;margin:22px 0 8px">{% if prioritarias %}Demais novas{% else %}Novas nas últimas 24h{% endif %}</h2>
+  {% if demais %}
+  {{ tabela(demais, False) }}
+  {% else %}<p style="color:#6b7280">Nada além das prioritárias.</p>{% endif %}
 
   {% if relevantes %}
-  <h2 style="font-size:16px;margin:18px 0 8px">Em andamento (por prazo)</h2>
+  <h2 style="font-size:16px;margin:22px 0 8px">Já em andamento (por prazo)</h2>
   <table style="width:100%;border-collapse:collapse;font-size:13px">
     {% for o in relevantes[:15] %}
     {% set pk = (premissas or {}).get(o.id) %}
     <tr style="border-bottom:1px solid #e5e7eb">
       <td style="padding:6px;white-space:nowrap">{{ o.data_encerramento_proposta.strftime("%d/%m %H:%M") if o.data_encerramento_proposta else "-" }}</td>
-      <td style="padding:6px"><a href="{{ dashboard }}oportunidades/{{ o.id }}">#{{ o.id }} {{ o.orgao_nome[:36] }}</a> <span style="color:#6b7280">· {{ o.status }}</span></td>
-      <td style="padding:6px;text-align:right;white-space:nowrap">{{ fmt(o.valor_estimado) }}</td>
+      <td style="padding:6px;text-align:right;white-space:nowrap"><b>{{ fmt(o.valor_estimado) }}</b></td>
+      <td style="padding:6px"><a href="{{ dashboard }}oportunidades/{{ o.id }}" style="color:#0d7d72">#{{ o.id }} {{ o.orgao_nome[:34] }}</a> <span style="color:#6b7280">· {{ o.status }}</span></td>
       <td style="padding:6px;text-align:right;white-space:nowrap;color:{{ '#dc2626' if pk and pk.n else '#16a34a' }}">{{ pk.n if pk else '?' }} pend.</td>
     </tr>
     {% endfor %}
   </table>
   {% endif %}
-  <p style="font-size:12px;color:#6b7280;margin-top:22px">Dashboard: <a href="{{ dashboard }}">{{ dashboard }}</a></p>
+
+  <p style="font-size:12px;color:#6b7280;margin-top:22px">
+    Painel: <a href="{{ dashboard }}">{{ dashboard }}</a> · filtre por valor, UF e prazo lá dentro.<br>
+    O que decide a prioridade e o que entra neste resumo está em Configurações → Perfil de interesse e Filtros técnicos.
+  </p>
 </div>
 </body></html>

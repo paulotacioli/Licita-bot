@@ -12,33 +12,95 @@ perfil:
   lote_pre_triagem: 40        # objetos por chamada à IA
   maximo_por_rodada: 400      # limite por execução; o resto fica para a próxima
   buscamos: >
-    Contratação de desenvolvimento de software sob demanda (fábrica de software, sistemas web e mobile,
-    pontos de função, horas de desenvolvimento), sustentação e manutenção evolutiva de sistemas existentes,
-    integração de sistemas e APIs, e licenciamento de sistema como serviço (SaaS) com hospedagem, em que
-    possamos entregar solução própria. Trabalho remoto, com equipe própria.
+    Só software 100% online: sistema acessado pelo navegador, hospedado em nuvem pelo fornecedor
+    (SaaS, "software como serviço", "solução em nuvem", "web", "plataforma online"), sem instalação
+    nas máquinas ou nos servidores do órgão e sem equipe presencial.
+
+    PRIORIDADE MÁXIMA, mesmo que o edital não diga a palavra "software": captura, digitalização,
+    processamento, validação, guarda e armazenamento em nuvem de documentos fiscais eletrônicos —
+    NF-e, NFS-e, CT-e, CT-e OS, MDF-e, NFC-e, manifesto eletrônico, DF-e, XML e DANFE — incluindo
+    monitoramento de eventos na SEFAZ, manifestação do destinatário, conciliação fiscal e guarda
+    pelo prazo legal. Também são prioridade gestão eletrônica de documentos (GED), digitalização e
+    indexação de acervos com OCR, arquivo digital e repositório documental em nuvem, desde que a
+    entrega seja o sistema online e não serviço de escaneamento no local.
+
+    Também servem, com prioridade normal: desenvolvimento de software sob demanda entregue como
+    aplicação web (fábrica de software, pontos de função), sustentação e manutenção evolutiva de
+    sistemas web, integração de sistemas e APIs, e licenciamento de SaaS com hospedagem em que
+    possamos entregar solução própria. Trabalho sempre remoto, com equipe própria.
   evitamos: >
+    Software instalado no servidor ou nas máquinas do órgão (on-premise, licença perpétua instalada,
+    sistema desktop, cliente-servidor), migração para datacenter do contratante e qualquer solução que
+    exija infraestrutura física nossa no órgão.
+
+    Serviço presencial de digitalização ou de organização de arquivo com equipe e scanners no local,
+    fornecimento ou locação de scanners e equipamentos, guarda física de caixas e papel.
+
     Compra de equipamentos ou hardware, licenças de fabricante específico (Microsoft, Oracle, Adobe,
     antivírus), outsourcing de postos de trabalho ou alocação de mão de obra presencial, exigência de
-    equipe residente no órgão, obras, telefonia, links de internet, impressão, e objetos em que o software
-    é só acessório de um equipamento.
+    equipe residente no órgão, obras, telefonia, links de internet, impressão, e objetos em que o
+    software é só acessório de um equipamento.
 
 
 termos_busca:
+  # Foco principal: documentos fiscais eletrônicos e guarda em nuvem
+  - "documentos fiscais eletrônicos"
+  - "nota fiscal eletrônica"
+  - "gestão de documentos fiscais"
+  - "CT-e"
+  - "MDF-e"
+  - "guarda de documentos"
+  - "gestão eletrônica de documentos"
+  - "digitalização de documentos"
+  - "armazenamento em nuvem"
+  # Software online em geral
+  - SaaS
+  - "software como serviço"
+  - "solução em nuvem"
+  - "sistema web"
+  - "plataforma digital"
+  - "licenciamento de software"
+  - "sistema informatizado"
   - software
   - "desenvolvimento de sistema"
   - "fábrica de software"
-  - "sistema web"
-  - "sistema informatizado"
-  - "solução tecnológica"
-  - "licenciamento de software"
-  - "licença de uso de software"
-  - SaaS
-  - "plataforma digital"
-  - aplicativo
-  - "portal web"
   - "sustentação de sistemas"
-  - "manutenção de sistemas"
-  - "pontos de função"
+
+# Objetos com estas palavras vão no topo do resumo diário, como prioridade
+palavras_prioritarias:
+  - nf-e
+  - nfe
+  - nfs-e
+  - nfse
+  - nfc-e
+  - ct-e
+  - cte
+  - mdf-e
+  - mdfe
+  - df-e
+  - danfe
+  - nota fiscal eletrônica
+  - notas fiscais eletrônicas
+  - documento fiscal eletrônico
+  - documentos fiscais eletrônicos
+  - conhecimento de transporte eletrônico
+  - manifesto eletrônico
+  - sefaz
+  - xml fiscal
+  - escrituração fiscal
+  - digitalização
+  - digitalizacao
+  - gestão eletrônica de documentos
+  - gestão documental
+  - ged
+  - guarda de documentos
+  - guarda digital
+  - arquivo digital
+  - acervo documental
+  - ocr
+  - reconhecimento óptico
+  - armazenamento em nuvem
+  - repositório digital
 
 # O objeto precisa conter pelo menos UMA destas palavras (a busca do PNCP é difusa e traz muito ruído)
 palavras_positivas:
@@ -55,6 +117,22 @@ palavras_positivas:
   - licenciamento
   - licença de uso
   - saas
+  - nuvem
+  - cloud
+  - nf-e
+  - nfe
+  - nfs-e
+  - ct-e
+  - mdf-e
+  - nota fiscal eletrônica
+  - documento fiscal
+  - documentos fiscais
+  - digitalização
+  - gestão documental
+  - gestão eletrônica de documentos
+  - ged
+  - guarda de documentos
+  - arquivo digital
   - desenvolvimento de sistema
   - desenvolvimento de software
   - desenvolvimento de solução
@@ -88,6 +166,13 @@ palavras_negativas:
   - "médico-hospitalar"
   - "medicamentos"
   - "gêneros alimentícios"
+  # 100% online: fora o que é instalado no órgão ou feito presencialmente
+  - "aquisição de scanner"
+  - "locação de scanner"
+  - "fornecimento de scanners"
+  - "guarda física"
+  - "armazenamento físico de documentos"
+  - "custódia de caixas"
 
 modalidades_aceitas: [6, 4, 8, 12]   # Pregão Eletrônico, Concorrência Eletrônica, Dispensa, Credenciamento
 ufs: []                              # vazio = Brasil inteiro; ex.: ["SP", "RJ", "MG"]

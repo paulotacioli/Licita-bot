@@ -116,6 +116,9 @@ SECOES: list[Secao] = [
             Campo("limite_diario_envios", "Limite de licitações por dia", "inteiro", minimo=1, maximo=500,
                   ajuda="Máximo de licitações enviadas por e-mail em um dia. O excedente fica na fila, "
                         "sempre priorizando o prazo mais próximo."),
+            Campo("somente_resumo_diario", "Só um e-mail por dia (o resumo)", "booleano",
+                  ajuda="Ligado: as licitações novas chegam apenas no resumo diário, e não uma a uma. "
+                        "Pedidos de aprovação continuam sendo enviados na hora, porque têm prazo."),
             Campo("hora_resumo_diario", "Hora do resumo diário", "inteiro", minimo=0, maximo=23,
                   ajuda="Hora de Brasília em que sai o resumo com as novas licitações e o estado da fila."),
         ],
@@ -131,6 +134,9 @@ SECOES: list[Secao] = [
             Campo("palavras_positivas", "Palavras que o objeto precisa ter", "lista",
                   ajuda="Um item por linha. Só é obrigatório quando a pré-triagem por IA está desligada; com ela "
                         "ligada, quem julga o objeto é a IA a partir do seu perfil de interesse."),
+            Campo("palavras_prioritarias", "Palavras que marcam prioridade", "lista",
+                  ajuda="Licitações cujo objeto cite uma destas aparecem no topo do resumo diário, "
+                        "separadas das demais. Uma por linha."),
             Campo("palavras_negativas", "Palavras que descartam na hora", "lista",
                   ajuda="Um item por linha. Se o objeto contiver qualquer uma, o edital é descartado "
                         "sem chamar a IA. Serve para cortar compra de hardware, veículos e afins."),
